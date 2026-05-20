@@ -12,6 +12,29 @@ import torch
 from diffusers import SanaPipeline
 
 
+def load_sana_pipeline(model_id: str, dtype: torch.dtype):
+    """Load Sana pipeline with fallback for missing fp16 variant.
+    
+    Tries to load with variant="fp16" for float16 dtype.
+    Falls back to loading without variant if the repo does not expose it.
+    """
+    load_kwargs = {
+        "torch_dtype": dtype,
+        "use_safetensors": True,
+    }
+    if dtype == torch.float16:
+        load_kwargs["variant"] = "fp16"
+    try:
+        return SanaPipeline.from_pretrained(model_id, **load_kwargs)
+    except (OSError, ValueError):
+        # Fallback if model repo does not expose a separate fp16 variant
+        if "variant" in load_kwargs:
+            print(f"Warning: fp16 variant not available, loading without variant")
+            load_kwargs.pop("variant", None)
+            return SanaPipeline.from_pretrained(model_id, **load_kwargs)
+        raise
+
+
 MODEL_OPTIONS = {
     "Sana 600M - 512px": "Efficient-Large-Model/Sana_600M_512px_diffusers",
     "Sana 600M - 1024px": "Efficient-Large-Model/Sana_600M_1024px_diffusers",
@@ -63,12 +86,7 @@ def load_pipeline(model_label, precision_mode, progress):
         clear_pipeline_cache()
 
     progress(0.05, desc=f"Loading {model_label}")
-    pipe = SanaPipeline.from_pretrained(
-        model_id,
-        torch_dtype=dtype,
-        variant="fp16" if dtype == torch.float16 else None,
-        use_safetensors=True,
-    )
+    pipe = load_sana_pipeline(model_id, dtype)
     pipe = pipe.to(device)
 
     if hasattr(pipe, "enable_attention_slicing"):

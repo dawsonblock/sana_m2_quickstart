@@ -27,21 +27,16 @@ if ! command -v python3.11 &>/dev/null; then
 fi
 
 # ── Virtual environment ───────────────────────────────────────────────────────
+# Only use root .venv, never reuse Sana-main/.venv
 
 if [ -d ".venv" ]; then
-  VENV_PATH=".venv"
-  echo "Using existing virtual environment: $VENV_PATH"
-elif [ -d "Sana-main/.venv" ]; then
-  VENV_PATH="Sana-main/.venv"
-  echo "Using existing virtual environment: $VENV_PATH"
+  echo "Using existing virtual environment: .venv"
 else
-  VENV_PATH=".venv"
-  echo "Creating virtual environment ($VENV_PATH) ..."
-  python3.11 -m venv "$VENV_PATH"
+  echo "Creating virtual environment (.venv) ..."
+  python3.11 -m venv .venv
 fi
 
-# shellcheck source=/dev/null
-source "$VENV_PATH/bin/activate"
+source ".venv/bin/activate"
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 

@@ -13,3 +13,4 @@ protobuf
 pillow
 ftfy
 beautifulsoup4
+regex
