@@ -17,8 +17,12 @@ from diffusers import SanaPipeline
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt", default="a cyberpunk cat with a neon sign that says Sana")
-    parser.add_argument("--model", default="Efficient-Large-Model/Sana_600M_512px_diffusers")
+    parser.add_argument(
+        "--prompt", default="a cyberpunk cat with a neon sign that says Sana"
+    )
+    parser.add_argument(
+        "--model", default="Efficient-Large-Model/Sana_600M_512px_diffusers"
+    )
     parser.add_argument("--height", type=int, default=512)
     parser.add_argument("--width", type=int, default=512)
     parser.add_argument("--steps", type=int, default=20)
@@ -33,7 +37,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     args = parse_args()
     device = "mps" if torch.backends.mps.is_available() else "cpu"
-    dtype = torch.float16 if args.dtype == "float16" and device == "mps" else torch.float32
+    dtype = (
+        torch.float16 if args.dtype == "float16" and device == "mps" else torch.float32
+    )
 
     print(f"Loading {args.model}")
     print(f"Device={device}, dtype={dtype}")
@@ -43,6 +49,8 @@ def main() -> None:
 
     if not args.no_attention_slicing and hasattr(pipe, "enable_attention_slicing"):
         pipe.enable_attention_slicing()
+    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
+        pipe.vae.enable_slicing()
 
     generator = torch.Generator(device="cpu").manual_seed(args.seed)
 
@@ -55,7 +63,11 @@ def main() -> None:
         generator=generator,
     )
 
-    image = result.images[0] if hasattr(result, "images") else result[0][0]
+    if not hasattr(result, "images") or not result.images:
+        raise RuntimeError(
+            "Pipeline returned no images. Try --dtype float32 or reduce resolution."
+        )
+    image = result.images[0]
     image.save(args.output)
     print(f"Saved {args.output}")
 
