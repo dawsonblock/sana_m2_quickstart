@@ -36,7 +36,16 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if args.height <= 0 or args.width <= 0:
+        raise ValueError("--height and --width must be positive integers")
+    if args.height % 32 != 0 or args.width % 32 != 0:
+        raise ValueError("--height and --width must be divisible by 32")
+    if args.steps <= 0:
+        raise ValueError("--steps must be greater than 0")
+
     device = "mps" if torch.backends.mps.is_available() else "cpu"
+    if args.dtype == "float16" and device == "cpu":
+        print("float16 requested on CPU; falling back to float32.")
     dtype = (
         torch.float16 if args.dtype == "float16" and device == "mps" else torch.float32
     )

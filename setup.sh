@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
+VENV_PATH=""
+
 echo "=== Sana M2 Setup ==="
 echo ""
 
@@ -26,26 +28,31 @@ fi
 
 # ── Virtual environment ───────────────────────────────────────────────────────
 
-if [ ! -d ".venv" ]; then
-  echo "Creating virtual environment (.venv) ..."
-  python3.11 -m venv .venv
+if [ -d ".venv" ]; then
+  VENV_PATH=".venv"
+  echo "Using existing virtual environment: $VENV_PATH"
+elif [ -d "Sana-main/.venv" ]; then
+  VENV_PATH="Sana-main/.venv"
+  echo "Using existing virtual environment: $VENV_PATH"
 else
-  echo "Virtual environment already exists — skipping creation."
+  VENV_PATH=".venv"
+  echo "Creating virtual environment ($VENV_PATH) ..."
+  python3.11 -m venv "$VENV_PATH"
 fi
 
 # shellcheck source=/dev/null
-source .venv/bin/activate
+source "$VENV_PATH/bin/activate"
 
 # ── Dependencies ──────────────────────────────────────────────────────────────
 
 echo "Upgrading pip ..."
-pip install -q -U pip setuptools wheel
+python -m pip install -q -U pip setuptools wheel
 
 echo "Installing core dependencies (requirements-macos-mps.txt) ..."
-pip install -r requirements-macos-mps.txt || { echo "ERROR: Dependency install failed. Check the output above."; exit 1; }
+python -m pip install -r requirements-macos-mps.txt || { echo "ERROR: Dependency install failed. Check the output above."; exit 1; }
 
 echo "Installing Gradio (web UI) ..."
-pip install gradio || { echo "WARNING: Gradio install failed — web UI (./launch.sh ui) will not work."; }
+python -m pip install gradio || { echo "WARNING: Gradio install failed — web UI (./launch.sh ui) will not work."; }
 
 # ── Verify MPS ────────────────────────────────────────────────────────────────
 

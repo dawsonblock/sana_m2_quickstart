@@ -7,13 +7,17 @@ cd "$SCRIPT_DIR"
 
 # ── Require setup to have been run ───────────────────────────────────────────
 
-if [ ! -d ".venv" ]; then
+if [ -d ".venv" ]; then
+  VENV_PATH=".venv"
+elif [ -d "Sana-main/.venv" ]; then
+  VENV_PATH="Sana-main/.venv"
+else
   echo "ERROR: Virtual environment not found. Run ./setup.sh first."
   exit 1
 fi
 
 # shellcheck source=/dev/null
-source .venv/bin/activate
+source "$VENV_PATH/bin/activate"
 
 # Required for unsupported MPS ops to fall back to CPU gracefully.
 export PYTORCH_ENABLE_MPS_FALLBACK=1
@@ -48,7 +52,7 @@ case "$CMD" in
     python Sana-main/benchmark_sana_m2.py
     ;;
 
-  help|--help|-h|*)
+  help|--help|-h)
     cat <<'EOF'
 Usage: ./launch.sh <command> [options]
 
@@ -75,5 +79,11 @@ Examples:
   ./launch.sh generate "portrait" --model Efficient-Large-Model/Sana_600M_1024px_diffusers --height 1024 --width 1024
   ./launch.sh ui
 EOF
+    ;;
+
+  *)
+    echo "ERROR: Unknown command '$CMD'"
+    echo "Run './launch.sh --help' for usage."
+    exit 2
     ;;
 esac
