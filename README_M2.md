@@ -31,6 +31,8 @@ Run once. Creates a `.venv`, installs all dependencies, and verifies Metal/MPS i
 ./setup.sh
 ```
 
+If `Sana-main/.venv` already exists, setup reuses it automatically.
+
 ---
 
 ## Usage
@@ -60,6 +62,7 @@ Common options:
 ```
 
 Run `./launch.sh` with no arguments to see all options.
+Unknown commands now fail fast with a clear error and non-zero exit code.
 
 ### Web UI
 
