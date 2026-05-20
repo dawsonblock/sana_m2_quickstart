@@ -8,7 +8,8 @@ more realistic on Mac M2 than the repo's CUDA-first native pipeline.
 import argparse
 import os
 
-# Must be set before importing torch so unsupported MPS ops can fall back to CPU.
+# Must be set before importing torch so unsupported MPS operations
+# can fall back to CPU.
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
 import torch  # noqa: E402
@@ -48,9 +49,9 @@ def main() -> None:
     device = "mps" if torch.backends.mps.is_available() else "cpu"
     if args.dtype == "float16" and device == "cpu":
         print("float16 requested on CPU; falling back to float32.")
-    dtype = (
-        torch.float16 if args.dtype == "float16" and device == "mps" else torch.float32
-    )
+    dtype = torch.float32
+    if args.dtype == "float16" and device == "mps":
+        dtype = torch.float16
 
     print(f"Loading {args.model}")
     print(f"Device={device}, dtype={dtype}")
