@@ -1,0 +1,15 @@
+# Minimal Mac Apple Silicon / MPS runtime for Sana through Hugging Face Diffusers.
+# Do not install the full Sana pyproject on Mac unless you are porting CUDA-only deps.
+torch
+torchvision
+torchaudio
+diffusers>=0.37.0
+transformers>=4.57.0
+accelerate>=1.0.1
+huggingface-hub>=0.36.0
+safetensors
+sentencepiece
+protobuf
+pillow
+ftfy
+beautifulsoup4
