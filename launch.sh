@@ -39,9 +39,13 @@ case "$CMD" in
     ;;
 
   ui)
+    if ! python -c "import gradio" >/dev/null 2>&1; then
+      echo "Installing UI dependency: gradio"
+      pip install -r requirements-ui.txt
+    fi
     echo "Starting Gradio web UI at http://127.0.0.1:7860"
     echo "(Press Ctrl+C to stop)"
-    python Sana-main/app_m2.py
+    python app_m2.py
     ;;
 
   verify)
@@ -49,7 +53,7 @@ case "$CMD" in
     ;;
 
   benchmark)
-    python Sana-main/benchmark_sana_m2.py
+    python benchmark_sana_m2.py
     ;;
 
   help|--help|-h)

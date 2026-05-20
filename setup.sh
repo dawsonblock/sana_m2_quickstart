@@ -51,9 +51,6 @@ python -m pip install -q -U pip wheel "setuptools<82"
 echo "Installing core dependencies (requirements-macos-mps.txt) ..."
 python -m pip install -r requirements-macos-mps.txt || { echo "ERROR: Dependency install failed. Check the output above."; exit 1; }
 
-echo "Installing Gradio (web UI) ..."
-python -m pip install gradio || { echo "WARNING: Gradio install failed — web UI (./launch.sh ui) will not work."; }
-
 # ── Verify MPS ────────────────────────────────────────────────────────────────
 
 echo ""

@@ -2,13 +2,14 @@
 
 Local text-to-image generation on macOS using [Sana](https://github.com/NVlabs/Sana) via Hugging Face Diffusers and PyTorch MPS (Metal). No CUDA, no NVIDIA GPU required.
 
-## Quick Start
+## What this is
 
-```bash
-./setup.sh                                          # one-time setup
-./launch.sh generate "a small robot on a workbench" # generate an image
-./launch.sh ui                                       # open the web UI
-```
+This is a **Mac Apple Silicon launcher** for Sana image generation using:
+- PyTorch **MPS** (Metal Performance Shaders)
+- Hugging Face **Diffusers**
+- **SanaPipeline** from Diffusers
+
+It does **not** use the upstream CUDA installer.
 
 ---
 
@@ -31,99 +32,174 @@ Run once. Creates a `.venv`, installs all dependencies, and verifies Metal/MPS i
 ./setup.sh
 ```
 
-If `Sana-main/.venv` already exists, setup reuses it automatically.
-
 ---
 
 ## Usage
 
-### Generate an image (CLI)
-
-```bash
-./launch.sh generate "your prompt here"
-```
-
-Common options:
-
-```bash
-# Quick test (fastest)
-./launch.sh generate "sunset over mountains" --steps 8
-
-# High-quality 512px (default)
-./launch.sh generate "a futuristic city" --steps 20
-
-# 1024px — needs 16 GB+ unified memory
-./launch.sh generate "macro photo of a circuit board" \
-  --model Efficient-Large-Model/Sana_600M_1024px_diffusers \
-  --height 1024 --width 1024
-
-# Save to a specific file
-./launch.sh generate "cozy reading room" --output my_image.png
-```
-
-Run `./launch.sh` with no arguments to see all options.
-Unknown commands now fail fast with a clear error and non-zero exit code.
-
-### Web UI
-
-```bash
-./launch.sh ui
-```
-
-Opens a Gradio interface at [http://127.0.0.1:7860](http://127.0.0.1:7860) with model selection, resolution controls, prompt library, and recovery presets.
-
-### Other commands
-
-```bash
-./launch.sh verify     # confirm MPS / Metal is active
-./launch.sh benchmark  # run the M2 performance benchmark
-```
-
----
-
-## Models
-
-| Model | Resolution | Speed | Memory | Notes |
-| --- | --- | --- | --- | --- |
-| `Sana_600M_512px_diffusers` | 512 × 512 | Fast | ~6 GB | **Default.** Best starting point |
-| `Sana_600M_1024px_diffusers` | 1024 × 1024 | Medium | ~10 GB | Sharper detail |
-| `Sana_1600M_512px_diffusers` | 512 × 512 | Slow | ~12 GB | Most detailed at 512px |
-
-All models are downloaded automatically from Hugging Face on first use (~1–4 GB each).
-
----
-
-## Troubleshooting
-
-### Grey or black output
-
-```bash
-./launch.sh generate "your prompt" --dtype float32
-```
-
-fp32 is slower but avoids fp16 artifacts on some Mac configurations.
-
-### Out of memory / kernel panics
-
-- Use 512 × 512 resolution
-- Reduce steps to 8–12
-- Generate one image at a time
-- Quit other memory-heavy applications
-
-### MPS not detected
+### Verify MPS
 
 ```bash
 ./launch.sh verify
 ```
 
-Ensure you are on Apple Silicon (`python3 -c "import platform; print(platform.machine())"` should print `arm64`).
+Output should show `MPS available: True` and a successful test tensor.
 
-### Slow first run
+### Generate an image (CLI)
 
-The model downloads from Hugging Face and is cached in `~/.cache/huggingface`. Subsequent runs use the cache and start much faster.
+```bash
+./launch.sh generate "a small robot building a glowing circuit board"
+```
+
+Saves to `sana_m2_output.png` by default.
+
+### Common CLI options
+
+```bash
+# Quick test (faster, lower memory)
+./launch.sh generate "sunset over mountains" --steps 8
+
+# Float32 (lower memory, potentially slower)
+./launch.sh generate "test prompt" --dtype float32 --steps 8 --output test_fp32.png
+
+# Higher resolution (requires more memory)
+./launch.sh generate "prompt" --model Efficient-Large-Model/Sana_600M_1024px_diffusers --height 1024 --width 1024
+
+# Custom seed
+./launch.sh generate "prompt" --seed 12345
+```
+
+### Full CLI reference
+
+```bash
+./launch.sh generate --help
+```
+
+### Launch the web UI
+
+```bash
+./launch.sh ui
+```
+
+Opens at `http://127.0.0.1:7860`. UI automatically installs Gradio on first run if needed.
+
+### Benchmark performance
+
+```bash
+./launch.sh benchmark
+```
+
+Runs several test configurations (512×512 at 8, 12, 20 steps) and reports timing.
 
 ---
 
-## What to avoid
+## Recommended first model
 
-Do **not** run `Sana-main/environment_setup.sh` or `pip install -e .` on Mac. These install CUDA wheels (xformers, flash-attn, triton, bitsandbytes) that are Linux/NVIDIA-only and will fail or silently break the environment.
+**Sana 600M 512px** (default)
+
+```text
+Efficient-Large-Model/Sana_600M_512px_diffusers
+```
+
+Works reliably on M2/M3 with 20 steps, float16, 512×512.
+
+---
+
+## Try later (after 512px is stable)
+
+- `Efficient-Large-Model/Sana_600M_1024px_diffusers` — Requires more memory
+- `Efficient-Large-Model/Sana_1600M_512px_diffusers` — Larger model; slow on M2
+
+---
+
+## Not recommended on basic M2
+
+- SANA-Video
+- LongSANA
+- SANA-WM
+- 4-bit CUDA quantization
+- Native training
+- Batch generation
+
+---
+
+## Do not run
+
+```bash
+cd Sana-main
+bash environment_setup.sh
+pip install -e .
+```
+
+These commands install CUDA/NVIDIA packages that fail on Apple Silicon. See [Sana-main/DO_NOT_RUN_ON_MAC_M2.md](./Sana-main/DO_NOT_RUN_ON_MAC_M2.md) for details.
+
+---
+
+## Troubleshooting
+
+### MPS not available
+
+- Verify Python is native arm64: `python3 -c 'import platform; print(platform.machine())'` should print `arm64`
+- Ensure macOS 13+
+- Reinstall PyTorch: `pip install --upgrade torch torchvision torchaudio`
+
+### Output is black or grey
+
+- Use Safe Recovery preset in the UI tab "Error Settings"
+- Or from CLI: `./launch.sh generate "prompt" --steps 8 --dtype float32`
+- Reduce resolution to 512×512
+
+### Mac is slow or swapping
+
+- Reduce steps: `--steps 8`
+- Use float32: `--dtype float32`
+- Reduce resolution: `--height 512 --width 512`
+- Generate one image at a time (MPS works best with serial execution)
+
+### Gradio UI won't load
+
+- Verify Gradio is installed: `python -c 'import gradio; print(gradio.__version__)'`
+- Reinstall: `pip install -r requirements-ui.txt`
+
+---
+
+## Output
+
+Images are saved as:
+- CLI: `sana_m2_output.png` (default) or custom filename via `--output`
+- UI: `outputs/sana_m2_<timestamp>_seed<N>_<WxH>.png`
+
+---
+
+## FAQ
+
+**Q: Why not the upstream Sana repo directly?**  
+A: The upstream repo is CUDA/NVIDIA-first. Diffusers provides a MPS-compatible pipeline that's more reliable on Mac.
+
+**Q: Can I use 1600M or larger models?**  
+A: Possibly, but they run slowly on M2. Start with 600M to verify stability.
+
+**Q: Can I train models?**  
+A: No. This is inference only. Training requires CUDA.
+
+**Q: Can I use the Dockerfile?**  
+A: The included Dockerfile is for CUDA/GPU environments. It won't work on Mac M2.
+
+**Q: Why float16 by default?**  
+A: It's faster and uses less memory on MPS. If output is poor, use `--dtype float32`.
+
+---
+
+## Advanced: Accessing Sana-main
+
+The `Sana-main/` directory contains the original upstream repository for reference. You can explore:
+- Model configurations: `Sana-main/configs/`
+- Training scripts: `Sana-main/train_scripts/`
+- LoRA/DreamBooth examples: `Sana-main/docs/sana_lora_dreambooth.md`
+
+But do not run any scripts from that directory on Mac M2 without explicit porting.
+
+---
+
+## License
+
+See LICENSE and Sana-main/LICENSE for details.

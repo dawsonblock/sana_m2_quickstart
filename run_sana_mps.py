@@ -16,6 +16,29 @@ import torch  # noqa: E402
 from diffusers import SanaPipeline  # noqa: E402
 
 
+def load_sana_pipeline(model_id: str, dtype: torch.dtype):
+    """Load Sana pipeline with fallback for missing fp16 variant.
+    
+    Tries to load with variant="fp16" for float16 dtype.
+    Falls back to loading without variant if the repo does not expose it.
+    """
+    load_kwargs = {
+        "torch_dtype": dtype,
+        "use_safetensors": True,
+    }
+    if dtype == torch.float16:
+        load_kwargs["variant"] = "fp16"
+    try:
+        return SanaPipeline.from_pretrained(model_id, **load_kwargs)
+    except OSError as e:
+        # Fallback if model repo does not expose a separate fp16 variant
+        if "variant" in load_kwargs:
+            print(f"Warning: fp16 variant not available, loading without variant")
+            load_kwargs.pop("variant", None)
+            return SanaPipeline.from_pretrained(model_id, **load_kwargs)
+        raise e
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -56,7 +79,7 @@ def main() -> None:
     print(f"Loading {args.model}")
     print(f"Device={device}, dtype={dtype}")
 
-    pipe = SanaPipeline.from_pretrained(args.model, torch_dtype=dtype)
+    pipe = load_sana_pipeline(args.model, dtype)
     pipe = pipe.to(device)
 
     if (
