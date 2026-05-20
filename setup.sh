@@ -46,7 +46,7 @@ source "$VENV_PATH/bin/activate"
 # ── Dependencies ──────────────────────────────────────────────────────────────
 
 echo "Upgrading pip ..."
-python -m pip install -q -U pip setuptools wheel
+python -m pip install -q -U pip wheel "setuptools<82"
 
 echo "Installing core dependencies (requirements-macos-mps.txt) ..."
 python -m pip install -r requirements-macos-mps.txt || { echo "ERROR: Dependency install failed. Check the output above."; exit 1; }
