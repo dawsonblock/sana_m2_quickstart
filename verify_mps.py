@@ -13,7 +13,8 @@ if torch.backends.mps.is_available():
 else:
     print("ERROR: MPS is not available.")
     print(
-        "  - Verify Python is native arm64: python3 -c 'import platform; print(platform.machine())'"
+        "  - Verify Python is native arm64: "
+        "python3 -c 'import platform; print(platform.machine())'"
     )
     print("  - Ensure macOS 13+ and Apple Silicon")
     print("  - Reinstall PyTorch: pip install torch torchvision torchaudio")

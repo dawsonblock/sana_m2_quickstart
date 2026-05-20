@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Sana text-to-image locally on Apple Silicon through Diffusers + PyTorch MPS.
+"""Run Sana text-to-image locally on Apple Silicon.
 
 Default model is the smaller Sana 0.6B 512px Diffusers checkpoint because it is
 more realistic on Mac M2 than the repo's CUDA-first native pipeline.
@@ -8,11 +8,11 @@ more realistic on Mac M2 than the repo's CUDA-first native pipeline.
 import argparse
 import os
 
-# Must be set before importing torch for unsupported MPS ops to fall back to CPU.
+# Must be set before importing torch so unsupported MPS ops can fall back to CPU.
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
-import torch
-from diffusers import SanaPipeline
+import torch  # noqa: E402
+from diffusers import SanaPipeline  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -28,7 +28,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--steps", type=int, default=20)
     parser.add_argument("--guidance", type=float, default=4.5)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--dtype", choices=["float16", "float32"], default="float16")
+    parser.add_argument(
+        "--dtype", choices=["float16", "float32"], default="float16"
+    )
     parser.add_argument("--output", default="sana_m2_output.png")
     parser.add_argument("--no-attention-slicing", action="store_true")
     return parser.parse_args()
@@ -56,7 +58,10 @@ def main() -> None:
     pipe = SanaPipeline.from_pretrained(args.model, torch_dtype=dtype)
     pipe = pipe.to(device)
 
-    if not args.no_attention_slicing and hasattr(pipe, "enable_attention_slicing"):
+    if (
+        not args.no_attention_slicing
+        and hasattr(pipe, "enable_attention_slicing")
+    ):
         pipe.enable_attention_slicing()
     if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
         pipe.vae.enable_slicing()
@@ -74,7 +79,8 @@ def main() -> None:
 
     if not hasattr(result, "images") or not result.images:
         raise RuntimeError(
-            "Pipeline returned no images. Try --dtype float32 or reduce resolution."
+            "Pipeline returned no images. "
+            "Try --dtype float32 or reduce resolution."
         )
     image = result.images[0]
     image.save(args.output)

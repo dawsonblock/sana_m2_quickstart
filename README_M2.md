@@ -15,7 +15,7 @@ Local text-to-image generation on macOS using [Sana](https://github.com/NVlabs/S
 ## Prerequisites
 
 | Requirement | Notes |
-|---|---|
+| --- | --- |
 | macOS 13 Ventura or later | Sonoma/Sequoia recommended |
 | Apple Silicon (M1/M2/M3/M4) | Intel Macs not supported |
 | Xcode Command Line Tools | `xcode-select --install` |
@@ -70,7 +70,7 @@ Unknown commands now fail fast with a clear error and non-zero exit code.
 ./launch.sh ui
 ```
 
-Opens a Gradio interface at **http://127.0.0.1:7860** with model selection, resolution controls, prompt library, and recovery presets.
+Opens a Gradio interface at [http://127.0.0.1:7860](http://127.0.0.1:7860) with model selection, resolution controls, prompt library, and recovery presets.
 
 ### Other commands
 
@@ -84,7 +84,7 @@ Opens a Gradio interface at **http://127.0.0.1:7860** with model selection, reso
 ## Models
 
 | Model | Resolution | Speed | Memory | Notes |
-|---|---|---|---|---|
+| --- | --- | --- | --- | --- |
 | `Sana_600M_512px_diffusers` | 512 × 512 | Fast | ~6 GB | **Default.** Best starting point |
 | `Sana_600M_1024px_diffusers` | 1024 × 1024 | Medium | ~10 GB | Sharper detail |
 | `Sana_1600M_512px_diffusers` | 512 × 512 | Slow | ~12 GB | Most detailed at 512px |
@@ -95,25 +95,31 @@ All models are downloaded automatically from Hugging Face on first use (~1–4 G
 
 ## Troubleshooting
 
-**Grey or black output**
+### Grey or black output
+
 ```bash
 ./launch.sh generate "your prompt" --dtype float32
 ```
+
 fp32 is slower but avoids fp16 artifacts on some Mac configurations.
 
-**Out of memory / kernel panics**
+### Out of memory / kernel panics
+
 - Use 512 × 512 resolution
 - Reduce steps to 8–12
 - Generate one image at a time
 - Quit other memory-heavy applications
 
-**MPS not detected**
+### MPS not detected
+
 ```bash
 ./launch.sh verify
 ```
+
 Ensure you are on Apple Silicon (`python3 -c "import platform; print(platform.machine())"` should print `arm64`).
 
-**Slow first run**
+### Slow first run
+
 The model downloads from Hugging Face and is cached in `~/.cache/huggingface`. Subsequent runs use the cache and start much faster.
 
 ---
