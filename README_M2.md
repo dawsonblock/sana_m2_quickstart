@@ -1,30 +1,120 @@
-# Sana on Mac M2
+# Sana on Apple Silicon (M2 / M3 / M4)
 
-This folder is a minimal Apple Silicon path for the uploaded Sana repo.
-It intentionally avoids the repo's CUDA-only dependencies and runs Sana through Hugging Face Diffusers on PyTorch MPS.
+Local text-to-image generation on macOS using [Sana](https://github.com/NVlabs/Sana) via Hugging Face Diffusers and PyTorch MPS (Metal). No CUDA, no NVIDIA GPU required.
+
+## Quick Start
+
+```bash
+./setup.sh                                          # one-time setup
+./launch.sh generate "a small robot on a workbench" # generate an image
+./launch.sh ui                                       # open the web UI
+```
+
+---
+
+## Prerequisites
+
+| Requirement | Notes |
+|---|---|
+| macOS 13 Ventura or later | Sonoma/Sequoia recommended |
+| Apple Silicon (M1/M2/M3/M4) | Intel Macs not supported |
+| Xcode Command Line Tools | `xcode-select --install` |
+| Python 3.11 | `brew install python@3.11` |
+
+---
 
 ## Setup
 
-```bash
-xcode-select --install
-cd ~/Downloads/Sana-main
-python3.11 -m venv .venv
-source .venv/bin/activate
-python -m pip install -U pip
-pip install -r requirements-macos-mps.txt
-python verify_mps.py
-```
-
-## Run
+Run once. Creates a `.venv`, installs all dependencies, and verifies Metal/MPS is working:
 
 ```bash
-python run_sana_mps.py --prompt "a small robot building a glowing circuit board" --height 512 --width 512 --steps 20
+./setup.sh
 ```
 
-For a stronger Mac, try:
+---
+
+## Usage
+
+### Generate an image (CLI)
 
 ```bash
-python run_sana_mps.py --model Efficient-Large-Model/Sana_600M_1024px_diffusers --height 1024 --width 1024 --steps 20
+./launch.sh generate "your prompt here"
 ```
 
-Avoid the repository's `environment_setup.sh` on Mac. It installs CUDA, xformers CUDA wheels, flash-attn, triton, and other NVIDIA/Linux-oriented packages.
+Common options:
+
+```bash
+# Quick test (fastest)
+./launch.sh generate "sunset over mountains" --steps 8
+
+# High-quality 512px (default)
+./launch.sh generate "a futuristic city" --steps 20
+
+# 1024px — needs 16 GB+ unified memory
+./launch.sh generate "macro photo of a circuit board" \
+  --model Efficient-Large-Model/Sana_600M_1024px_diffusers \
+  --height 1024 --width 1024
+
+# Save to a specific file
+./launch.sh generate "cozy reading room" --output my_image.png
+```
+
+Run `./launch.sh` with no arguments to see all options.
+
+### Web UI
+
+```bash
+./launch.sh ui
+```
+
+Opens a Gradio interface at **http://127.0.0.1:7860** with model selection, resolution controls, prompt library, and recovery presets.
+
+### Other commands
+
+```bash
+./launch.sh verify     # confirm MPS / Metal is active
+./launch.sh benchmark  # run the M2 performance benchmark
+```
+
+---
+
+## Models
+
+| Model | Resolution | Speed | Memory | Notes |
+|---|---|---|---|---|
+| `Sana_600M_512px_diffusers` | 512 × 512 | Fast | ~6 GB | **Default.** Best starting point |
+| `Sana_600M_1024px_diffusers` | 1024 × 1024 | Medium | ~10 GB | Sharper detail |
+| `Sana_1600M_512px_diffusers` | 512 × 512 | Slow | ~12 GB | Most detailed at 512px |
+
+All models are downloaded automatically from Hugging Face on first use (~1–4 GB each).
+
+---
+
+## Troubleshooting
+
+**Grey or black output**
+```bash
+./launch.sh generate "your prompt" --dtype float32
+```
+fp32 is slower but avoids fp16 artifacts on some Mac configurations.
+
+**Out of memory / kernel panics**
+- Use 512 × 512 resolution
+- Reduce steps to 8–12
+- Generate one image at a time
+- Quit other memory-heavy applications
+
+**MPS not detected**
+```bash
+./launch.sh verify
+```
+Ensure you are on Apple Silicon (`python3 -c "import platform; print(platform.machine())"` should print `arm64`).
+
+**Slow first run**
+The model downloads from Hugging Face and is cached in `~/.cache/huggingface`. Subsequent runs use the cache and start much faster.
+
+---
+
+## What to avoid
+
+Do **not** run `Sana-main/environment_setup.sh` or `pip install -e .` on Mac. These install CUDA wheels (xformers, flash-attn, triton, bitsandbytes) that are Linux/NVIDIA-only and will fail or silently break the environment.
