@@ -128,7 +128,7 @@ directly to image and metadata files.
 ./launch.sh phone
 ```
 
-Phone mode starts the API on `0.0.0.0:7861`, prints your Mac LAN URL, and
+Phone mode starts the API on `0.0.0.0:7111`, prints your Mac LAN URL, and
 shows a terminal QR code when `qrcode[pil]` is installed.
 
 Use phone mode safely:

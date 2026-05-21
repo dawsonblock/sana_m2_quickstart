@@ -17,7 +17,7 @@ Commands:
   generate "your prompt"   Generate an image from a text prompt
   grid                     Generate multiple images and a grid contact sheet
   api                      Launch the FastAPI server (http://127.0.0.1:7861)
-  phone                    Launch LAN phone control mode (http://<LAN_IP>:7861/phone)
+  phone                    Launch LAN phone control mode (http://<LAN_IP>:7111/phone)
   ui                       Launch the Gradio web UI (http://127.0.0.1:7860)
   verify                   Check MPS / Metal availability
   benchmark                Run the M2 performance benchmark
@@ -96,7 +96,7 @@ case "$CMD" in
       echo "Installing API dependencies ..."
       pip install -r requirements-api.txt
     fi
-    python api_server.py --host 0.0.0.0 --port 7861 --phone "$@"
+    python api_server.py --host 0.0.0.0 --port 7111 --phone "$@"
     ;;
 
   ui)

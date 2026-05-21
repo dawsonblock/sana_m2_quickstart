@@ -74,7 +74,7 @@ app.mount(
 PHONE_MODE = False
 PHONE_TOKEN: Optional[str] = None
 PHONE_HOST = "127.0.0.1"
-PHONE_PORT = 7861
+PHONE_PORT = 7111
 PHONE_LAN_IP = "127.0.0.1"
 
 
@@ -423,7 +423,7 @@ def preset_delete(preset_id: str, request: Request) -> Dict[str, Any]:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Sana M2 FastAPI server")
     parser.add_argument("--host", default="127.0.0.1")
-    parser.add_argument("--port", type=int, default=7861)
+    parser.add_argument("--port", type=int, default=7111)
     parser.add_argument("--phone", action="store_true")
     args = parser.parse_args()
 

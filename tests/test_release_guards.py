@@ -13,7 +13,7 @@ class ReleaseGuardTests(unittest.TestCase):
         self.assertNotIn("Sana-main/.venv", launch_content)
         self.assertIn("phone)", launch_content)
         self.assertIn("--host 127.0.0.1 --port 7861", launch_content)
-        self.assertIn("--host 0.0.0.0 --port 7861 --phone", launch_content)
+        self.assertIn("--host 0.0.0.0 --port 7111 --phone", launch_content)
 
     def test_smoke_check_scans_expanded_runtime_targets(self):
         smoke_content = (self.root / "smoke_check.sh").read_text(
