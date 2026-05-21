@@ -77,6 +77,14 @@ class GalleryPresetTests(unittest.TestCase):
         self.assertTrue(presets.delete_preset("custom_test"))
         self.assertFalse(presets.delete_preset("missing_preset"))
 
+    def test_gallery_js_uses_dom_text_apis_for_prompt_rendering(self):
+        gallery_js = (Path(__file__).resolve().parents[1] / "static" / "gallery.js")
+        content = gallery_js.read_text(encoding="utf-8")
+
+        self.assertNotIn("card.innerHTML", content)
+        self.assertIn("title.textContent = prompt", content)
+        self.assertNotIn("/file/", content)
+
 
 if __name__ == "__main__":
     unittest.main()

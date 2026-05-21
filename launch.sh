@@ -47,17 +47,13 @@ fi
 
 # ── Resolve virtual environment ─────────────────────────────────────────────
 
-if [ -d ".venv" ]; then
-  VENV_PATH=".venv"
-elif [ -d "Sana-main/.venv" ]; then
-  # Compatibility path for environments created in the upstream subtree.
-  VENV_PATH="Sana-main/.venv"
-else
+if [ ! -d ".venv" ]; then
   echo "ERROR: Virtual environment not found."
-  echo "Tried: .venv and Sana-main/.venv"
   echo "Run ./setup.sh first."
   exit 1
 fi
+
+VENV_PATH=".venv"
 
 if [ ! -x "$VENV_PATH/bin/python" ]; then
   echo "ERROR: Python not found in virtual environment: $VENV_PATH"

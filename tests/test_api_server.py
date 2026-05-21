@@ -137,8 +137,8 @@ class ApiServerTests(unittest.TestCase):
         presets_response = self.client.get("/presets")
         metadata_response = self.client.get("/metadata")
         gallery_response = self.client.get("/gallery")
-        file_response = self.client.get("/file/outputs/sample.png")
-        invalid_file_response = self.client.get("/file/../secret.txt")
+        output_response = self.client.get("/outputs/sample.png")
+        missing_file_route_response = self.client.get("/file/outputs/sample.png")
 
         self.assertEqual(save_response.status_code, 200)
         self.assertEqual(presets_response.status_code, 200)
@@ -146,8 +146,17 @@ class ApiServerTests(unittest.TestCase):
         self.assertEqual(metadata_response.status_code, 200)
         self.assertIn("outputs/sample.json", metadata_response.json()["items"])
         self.assertEqual(gallery_response.status_code, 200)
-        self.assertEqual(file_response.status_code, 200)
-        self.assertEqual(invalid_file_response.status_code, 404)
+        self.assertEqual(output_response.status_code, 200)
+        self.assertEqual(missing_file_route_response.status_code, 404)
+
+    def test_metadata_endpoint_rejects_non_json_filenames(self):
+        response = self.client.get("/metadata/sample.png")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json().get("detail"),
+            "Metadata file must be .json",
+        )
 
     def test_batch_and_grid_require_seed_list(self):
         batch_response = self.client.post(
@@ -161,6 +170,21 @@ class ApiServerTests(unittest.TestCase):
 
         self.assertEqual(batch_response.status_code, 400)
         self.assertEqual(grid_response.status_code, 400)
+
+    def test_grid_rejects_unsafe_output_paths(self):
+        absolute_response = self.client.post(
+            "/generate/grid",
+            json={"prompt": "x", "seeds": [1], "output": "/tmp/evil.png"},
+        )
+        traversal_response = self.client.post(
+            "/generate/grid",
+            json={"prompt": "x", "seeds": [1], "output": "../evil.png"},
+        )
+
+        self.assertEqual(absolute_response.status_code, 400)
+        self.assertIn("relative", absolute_response.json().get("detail", ""))
+        self.assertEqual(traversal_response.status_code, 400)
+        self.assertIn("must not contain", traversal_response.json().get("detail", ""))
 
 
 if __name__ == "__main__":

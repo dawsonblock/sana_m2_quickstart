@@ -6,6 +6,7 @@ from PIL import Image
 
 from .engine import generate_image
 from .metadata import write_json
+from .paths import safe_output_path
 from .schemas import GenerationRequest
 
 
@@ -80,9 +81,7 @@ def generate_grid(
     if columns <= 0:
         raise ValueError("Grid columns must be greater than 0.")
 
-    output_path = Path(output_name)
-    if output_path.suffix.lower() != ".png":
-        raise ValueError("Grid output must end with .png.")
+    output_path = safe_output_path(output_name)
 
     batch_metadata = generate_batch(base_request, seeds)
     image_paths = [item["image_path"] for item in batch_metadata]

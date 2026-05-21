@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import uvicorn
 
 from sana_core.engine import generate_image, get_device
@@ -56,7 +56,7 @@ class PresetBody(BaseModel):
     steps: int = 12
     guidance: float = 4.5
     dtype: str = "float16"
-    tags: List[str] = []
+    tags: List[str] = Field(default_factory=list)
 
 
 app = FastAPI(title="Sana M2 API", version="0.1.0")
@@ -111,6 +111,14 @@ def _log_api_request(endpoint: str, payload: Dict[str, Any]) -> None:
     )
 
 
+def _raise_api_error(error: Exception) -> None:
+    if isinstance(error, HTTPException):
+        raise error
+    if isinstance(error, ValueError):
+        raise HTTPException(status_code=400, detail=str(error)) from error
+    raise HTTPException(status_code=500, detail="Generation failed") from error
+
+
 @app.get("/health")
 def health() -> Dict[str, Any]:
     return {"ok": True, "device": get_device()}
@@ -124,7 +132,10 @@ def models() -> Dict[str, Any]:
 @app.post("/generate")
 def generate(body: GenerateBody) -> Dict[str, Any]:
     _log_api_request("/generate", body.model_dump())
-    result = generate_image(_to_request(body))
+    try:
+        result = generate_image(_to_request(body))
+    except Exception as error:
+        _raise_api_error(error)
     return {
         "image_path": result.image_path,
         "metadata_path": result.metadata_path,
@@ -140,7 +151,10 @@ def generate_batch_endpoint(body: BatchBody) -> Dict[str, Any]:
             detail="Seed list must not be empty",
         )
     _log_api_request("/generate/batch", body.model_dump())
-    items = generate_batch(_to_request(body, seed=body.seeds[0]), body.seeds)
+    try:
+        items = generate_batch(_to_request(body, seed=body.seeds[0]), body.seeds)
+    except Exception as error:
+        _raise_api_error(error)
     return {"items": items}
 
 
@@ -152,12 +166,15 @@ def generate_grid_endpoint(body: GridBody) -> Dict[str, Any]:
             detail="Seed list must not be empty",
         )
     _log_api_request("/generate/grid", body.model_dump())
-    return generate_grid(
-        base_request=_to_request(body, seed=body.seeds[0]),
-        seeds=body.seeds,
-        columns=body.columns,
-        output_name=body.output or "outputs/grid.png",
-    )
+    try:
+        return generate_grid(
+            base_request=_to_request(body, seed=body.seeds[0]),
+            seeds=body.seeds,
+            columns=body.columns,
+            output_name=body.output or "outputs/grid.png",
+        )
+    except Exception as error:
+        _raise_api_error(error)
 
 
 @app.get("/outputs")
@@ -165,9 +182,9 @@ def outputs() -> Dict[str, Any]:
     return {"items": list_gallery_items()}
 
 
-@app.get("/outputs/{image_filename}")
-def output_file(image_filename: str) -> FileResponse:
-    return FileResponse(_safe_project_path(f"outputs/{image_filename}"))
+@app.get("/outputs/{image_path:path}")
+def output_file(image_path: str) -> FileResponse:
+    return FileResponse(_safe_project_path(f"outputs/{image_path}"))
 
 
 @app.get("/metadata")
@@ -179,15 +196,12 @@ def metadata_list() -> Dict[str, Any]:
     return {"items": items}
 
 
-@app.get("/metadata/{metadata_filename}")
+@app.get("/metadata/{metadata_filename:path}")
 def metadata_file(metadata_filename: str) -> Dict[str, Any]:
+    if Path(metadata_filename).suffix.lower() != ".json":
+        raise HTTPException(status_code=400, detail="Metadata file must be .json")
     path = _safe_project_path(f"outputs/{metadata_filename}")
     return read_json(path)
-
-
-@app.get("/file/{path:path}")
-def project_file(path: str) -> FileResponse:
-    return FileResponse(_safe_project_path(path))
 
 
 @app.get("/gallery")

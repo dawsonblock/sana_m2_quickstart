@@ -9,26 +9,71 @@ async function loadGallery() {
     return;
   }
 
+  const encodePath = (value) => String(value)
+    .split('/')
+    .filter(Boolean)
+    .map((part) => encodeURIComponent(part))
+    .join('/');
+
+  const stripOutputsPrefix = (value) => {
+    const normalized = String(value || '');
+    return normalized.startsWith('outputs/') ? normalized.slice('outputs/'.length) : normalized;
+  };
+
   for (const item of data.items) {
     const card = document.createElement('article');
     card.className = 'card';
     const prompt = item.prompt || 'Untitled generation';
-    card.innerHTML = `
-      <img src="/file/${item.image_path}" alt="${prompt}">
-      <div>
-        <h2>${prompt}</h2>
-        <div class="meta">
-          <div>Seed: ${item.seed ?? 'n/a'}</div>
-          <div>Steps: ${item.steps ?? 'n/a'}</div>
-          <div>Model: ${item.model ?? 'n/a'}</div>
-          <div>Runtime: ${item.runtime_seconds ?? 'n/a'}s</div>
-        </div>
-      </div>
-      <div class="actions">
-        <a href="/file/${item.image_path}" target="_blank" rel="noreferrer">Open image</a>
-        <a href="/file/${item.metadata_path}" target="_blank" rel="noreferrer">Open metadata</a>
-      </div>
-    `;
+    const imagePath = encodePath(stripOutputsPrefix(item.image_path));
+    const metadataPath = encodePath(stripOutputsPrefix(item.metadata_path));
+
+    const image = document.createElement('img');
+    image.src = `/outputs/${imagePath}`;
+    image.alt = prompt;
+
+    const content = document.createElement('div');
+
+    const title = document.createElement('h2');
+    title.textContent = prompt;
+    content.appendChild(title);
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    const metaRows = [
+      ['Seed', item.seed ?? 'n/a'],
+      ['Steps', item.steps ?? 'n/a'],
+      ['Model', item.model ?? 'n/a'],
+      ['Runtime', `${item.runtime_seconds ?? 'n/a'}s'],
+    ];
+
+    for (const [label, value] of metaRows) {
+      const row = document.createElement('div');
+      row.textContent = `${label}: ${value}`;
+      meta.appendChild(row);
+    }
+    content.appendChild(meta);
+
+    const actions = document.createElement('div');
+    actions.className = 'actions';
+
+    const imageLink = document.createElement('a');
+    imageLink.href = `/outputs/${imagePath}`;
+    imageLink.target = '_blank';
+    imageLink.rel = 'noreferrer';
+    imageLink.textContent = 'Open image';
+
+    const metadataLink = document.createElement('a');
+    metadataLink.href = `/metadata/${metadataPath}`;
+    metadataLink.target = '_blank';
+    metadataLink.rel = 'noreferrer';
+    metadataLink.textContent = 'Open metadata';
+
+    actions.appendChild(imageLink);
+    actions.appendChild(metadataLink);
+
+    card.appendChild(image);
+    card.appendChild(content);
+    card.appendChild(actions);
     root.appendChild(card);
   }
 }

@@ -35,7 +35,17 @@ python3 -m unittest discover -s tests -p 'test_*.py'
 
 echo "[4/5] Root dependency guard (no CUDA-only packages)"
 if grep -R -n "flash-attn\|xformers\|bitsandbytes\|cu128\|cuda-toolkit\|triton\|mmcv" \
-  requirements-macos-mps.txt setup.sh launch.sh run_sana_mps.py app_m2.py benchmark_sana_m2.py sana_core/*.py; then
+  requirements-macos-mps.txt \
+  requirements-ui.txt \
+  requirements-api.txt \
+  setup.sh \
+  launch.sh \
+  run_sana_mps.py \
+  run_sana_grid.py \
+  api_server.py \
+  app_m2.py \
+  benchmark_sana_m2.py \
+  sana_core/*.py; then
   echo ""
   echo "FAIL: Found forbidden CUDA/NVIDIA dependency references in root wrapper files."
   exit 1
@@ -45,6 +55,12 @@ echo "[5/5] Wrapper structure guard"
 if [[ ! -f "Sana-main/DO_NOT_RUN_ON_MAC_M2.md" ]]; then
   echo ""
   echo "FAIL: Missing Sana-main/DO_NOT_RUN_ON_MAC_M2.md warning file."
+  exit 1
+fi
+
+if grep -R -n "VENV_PATH=.*Sana-main/.venv\|source .*Sana-main/.venv" launch.sh setup.sh; then
+  echo ""
+  echo "FAIL: Root launcher must never reuse Sana-main/.venv."
   exit 1
 fi
 
