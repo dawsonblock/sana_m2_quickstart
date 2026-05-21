@@ -58,7 +58,7 @@ Saves to `sana_m2_output.png` by default.
 # Quick test (faster, lower memory)
 ./launch.sh generate "sunset over mountains" --steps 8
 
-# Float32 (lower memory, potentially slower)
+# Float32 (more stable, potentially slower, may use more memory)
 ./launch.sh generate "test prompt" --dtype float32 --steps 8 --output test_fp32.png
 
 # Higher resolution (requires more memory)
@@ -151,7 +151,7 @@ These commands install CUDA/NVIDIA packages that fail on Apple Silicon. See [San
 ### Mac is slow or swapping
 
 - Reduce steps: `--steps 8`
-- Use float32: `--dtype float32`
+- Use float32 for stability: `--dtype float32` (may use more memory)
 - Reduce resolution: `--height 512 --width 512`
 - Generate one image at a time (MPS works best with serial execution)
 

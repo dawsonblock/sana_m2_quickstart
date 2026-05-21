@@ -168,7 +168,7 @@ def safe_settings():
         8,
         3.8,
         "Force FP32",
-        "Applied Safe Recovery. Go to Generate and run with the lower-memory FP32 settings.",
+        "Applied Safe Recovery. Go to Generate and run with lower resolution, fewer steps, and FP32 for numerical stability.",
         gr.Tabs(selected="generate"),
     )
 
@@ -262,7 +262,11 @@ CSS = """
 """
 
 
-with gr.Blocks(title="Sana on Mac M2") as demo:
+with gr.Blocks(
+    title="Sana on Mac M2",
+    css=CSS,
+    theme=gr.themes.Soft(),
+) as demo:
     with gr.Column(elem_classes="app-shell"):
         with gr.Row(elem_classes="title-row"):
             gr.Markdown(

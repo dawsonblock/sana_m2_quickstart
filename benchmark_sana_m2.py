@@ -15,6 +15,12 @@ TESTS = [
         "model": "Efficient-Large-Model/Sana_600M_512px_diffusers",
         "height": 512,
         "width": 512,
+        "steps": 8,
+    },
+    {
+        "model": "Efficient-Large-Model/Sana_600M_512px_diffusers",
+        "height": 512,
+        "width": 512,
         "steps": 12,
     },
     {

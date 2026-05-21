@@ -61,7 +61,6 @@ shift || true
 
 case "$CMD" in
   generate|gen)
-    shift
     # Allow bare positional prompt: ./launch.sh generate "my prompt" [flags]
     # run_sana_mps.py uses argparse so a bare string must become --prompt.
     if [[ $# -gt 0 && "${1:0:1}" != "-" ]]; then
