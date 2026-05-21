@@ -27,8 +27,6 @@ if ! command -v $PYTHON_VERSION &> /dev/null; then
         exit 1
     fi
 fi
-# Use the selected Python version
-$PYTHON_VERSION -m venv .venv
 
 # ── Virtual environment ───────────────────────────────────────────────────────
 # Only use root .venv, never reuse Sana-main/.venv
