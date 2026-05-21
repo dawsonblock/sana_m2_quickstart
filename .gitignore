@@ -10,3 +10,6 @@ sana_m2_output.png
 .env
 .env.local
 .cache/
+
+# release artifacts
+*.zip
