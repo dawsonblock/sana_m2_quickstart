@@ -77,15 +77,15 @@ case "$CMD" in
     fi
     echo "Starting Gradio web UI at http://127.0.0.1:7860"
     echo "(Press Ctrl+C to stop)"
-    python app_m2.py
+    python app_m2.py "$@"
     ;;
 
   verify)
-    python verify_mps.py
+    python verify_mps.py "$@"
     ;;
 
   benchmark)
-    python benchmark_sana_m2.py
+    python benchmark_sana_m2.py "$@"
     ;;
 
 

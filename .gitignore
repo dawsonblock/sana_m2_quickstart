@@ -7,3 +7,6 @@ outputs/
 *.png
 benchmark_*.png
 sana_m2_output.png
+.env
+.env.local
+.cache/
