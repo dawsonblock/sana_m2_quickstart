@@ -13,6 +13,7 @@ class GenerationRequest:
     guidance: float = 4.5
     seed: int = 42
     dtype: str = "float16"
+    attention_slicing: bool = True
     output: Optional[str] = None
 
 

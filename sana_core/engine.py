@@ -109,7 +109,7 @@ def validate_request(req: GenerationRequest) -> None:
 
 
 def default_output_name(req: GenerationRequest) -> str:
-    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S-%f")
     return (
         f"outputs/sana_m2_{timestamp}_seed{req.seed}_"
         f"{req.width}x{req.height}.png"
@@ -144,6 +144,12 @@ def generate_image(
 
     _report_progress(progress, 0.02, f"Loading {req.model}")
     pipe = get_pipeline(req.model, dtype, device)
+
+    if req.attention_slicing:
+        if hasattr(pipe, "enable_attention_slicing"):
+            pipe.enable_attention_slicing()
+    elif hasattr(pipe, "disable_attention_slicing"):
+        pipe.disable_attention_slicing()
 
     generator = torch.Generator(device="cpu").manual_seed(req.seed)
     pipe_kwargs = {
@@ -193,6 +199,7 @@ def generate_image(
         "guidance": req.guidance,
         "seed": req.seed,
         "dtype": req.dtype,
+        "attention_slicing": req.attention_slicing,
         "device": device,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "runtime_seconds": runtime_seconds,

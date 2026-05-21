@@ -42,6 +42,14 @@ def parse_args() -> argparse.Namespace:
         choices=["float16", "float32"],
         default="float16",
     )
+    parser.add_argument(
+        "--no-attention-slicing",
+        action="store_true",
+        help=(
+            "Disable attention slicing for compatibility with "
+            "earlier CLI behavior."
+        ),
+    )
     parser.add_argument("--output", default="sana_m2_output.png")
     return parser.parse_args()
 
@@ -65,6 +73,7 @@ def main() -> None:
             guidance=args.guidance,
             seed=args.seed,
             dtype=args.dtype,
+            attention_slicing=not args.no_attention_slicing,
             output=args.output,
         )
     )

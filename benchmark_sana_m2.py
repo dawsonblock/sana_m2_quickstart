@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Benchmark Sana 600M on Mac M2 with fixed baseline step counts."""
 
+import json
 import os
 import time
 from pathlib import Path
@@ -70,7 +71,7 @@ def run_test(test):
         }
     )
     append_jsonl(LOG_DIR / "benchmarks.jsonl", record)
-    print(record)
+    print(json.dumps(record, ensure_ascii=False))
 
 
 def main():
