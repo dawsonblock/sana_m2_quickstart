@@ -77,7 +77,14 @@ def resolve_output_path(raw_output: str) -> Path:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--prompt", default="a cyberpunk cat with a neon sign that says Sana"
+        "prompt_positional",
+        nargs="?",
+        help="Optional positional prompt text",
+    )
+    parser.add_argument(
+        "--prompt",
+        default=None,
+        help="Prompt text. If omitted, positional prompt or default is used.",
     )
     parser.add_argument(
         "--model", default="Efficient-Large-Model/Sana_600M_512px_diffusers"
@@ -103,6 +110,9 @@ def parse_args() -> argparse.Namespace:
 def main() -> None:
     started = time.perf_counter()
     args = parse_args()
+    prompt = args.prompt or args.prompt_positional or (
+        "a cyberpunk cat with a neon sign that says Sana"
+    )
     if args.height <= 0 or args.width <= 0:
         raise ValueError("--height and --width must be positive integers")
     if args.height % 32 != 0 or args.width % 32 != 0:
@@ -134,7 +144,7 @@ def main() -> None:
     generator = torch.Generator(device="cpu").manual_seed(args.seed)
 
     pipe_kwargs = {
-        "prompt": args.prompt,
+        "prompt": prompt,
         "height": args.height,
         "width": args.width,
         "guidance_scale": args.guidance,
@@ -164,7 +174,7 @@ def main() -> None:
     elapsed = time.perf_counter() - started
     dtype_name = "float16" if dtype == torch.float16 else "float32"
     metadata = {
-        "prompt": args.prompt,
+        "prompt": prompt,
         "negative_prompt": args.negative_prompt or None,
         "model": args.model,
         "height": args.height,

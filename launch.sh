@@ -33,6 +33,7 @@ Generate options (all optional):
 
 Examples:
   ./launch.sh generate "a small robot building a glowing circuit board"
+  ./launch.sh generate --steps 8 "moon base interior"
   ./launch.sh generate "moon base interior" --steps 8 --height 512 --width 512
   ./launch.sh generate "portrait" --model Efficient-Large-Model/Sana_600M_1024px_diffusers --height 1024 --width 1024
   ./launch.sh ui
@@ -62,13 +63,7 @@ shift || true
 
 case "$CMD" in
   generate|gen)
-    # Allow bare positional prompt: ./launch.sh generate "my prompt" [flags]
-    # run_sana_mps.py uses argparse so a bare string must become --prompt.
-    if [[ $# -gt 0 && "${1:0:1}" != "-" ]]; then
-      python run_sana_mps.py --prompt "$1" "${@:2}"
-    else
-      python run_sana_mps.py "$@"
-    fi
+    python run_sana_mps.py "$@"
     ;;
 
   ui)

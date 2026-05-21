@@ -30,7 +30,14 @@ fi
 # Only use root .venv, never reuse Sana-main/.venv
 
 if [ -d ".venv" ]; then
-  echo "Using existing virtual environment: .venv"
+  if [ -x ".venv/bin/python" ] && ".venv/bin/python" -m pip --version >/dev/null 2>&1; then
+    echo "Using existing virtual environment: .venv"
+  else
+    echo "Existing .venv appears broken; recreating it ..."
+    rm -rf .venv
+    echo "Creating virtual environment (.venv) ..."
+    python3.11 -m venv .venv
+  fi
 else
   echo "Creating virtual environment (.venv) ..."
   python3.11 -m venv .venv
