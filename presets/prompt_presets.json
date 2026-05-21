@@ -1,0 +1,28 @@
+{
+  "presets": [
+    {
+      "id": "wheelchair_drone_interface",
+      "name": "Wheelchair Drone Interface",
+      "prompt": "technical render of a chin-controlled drone interface mounted on a power wheelchair, clean white background, product design style",
+      "negative_prompt": "blurry, messy, low quality, distorted",
+      "width": 512,
+      "height": 512,
+      "steps": 12,
+      "guidance": 4.5,
+      "dtype": "float16",
+      "tags": ["assistive-tech", "drone", "interface"]
+    },
+    {
+      "id": "judge_atlas_dashboard",
+      "name": "JUDGE_ATLASX Dashboard",
+      "prompt": "clean dashboard UI for legal evidence map system, Canada map, case markers, evidence timeline, modern white interface",
+      "negative_prompt": "cluttered, blurry, dark, low quality",
+      "width": 512,
+      "height": 512,
+      "steps": 12,
+      "guidance": 4.5,
+      "dtype": "float16",
+      "tags": ["ui", "legal-tech", "dashboard"]
+    }
+  ]
+}

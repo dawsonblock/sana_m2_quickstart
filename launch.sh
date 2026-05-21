@@ -15,6 +15,8 @@ Usage: ./launch.sh <command> [options]
 
 Commands:
   generate "your prompt"   Generate an image from a text prompt
+  grid                     Generate multiple images and a grid contact sheet
+  api                      Launch the FastAPI server (http://127.0.0.1:7861)
   ui                       Launch the Gradio web UI (http://127.0.0.1:7860)
   verify                   Check MPS / Metal availability
   benchmark                Run the M2 performance benchmark
@@ -35,20 +37,33 @@ Examples:
   ./launch.sh generate "a small robot building a glowing circuit board"
   ./launch.sh generate --steps 8 "moon base interior"
   ./launch.sh generate "moon base interior" --steps 8 --height 512 --width 512
+  ./launch.sh grid --prompt "moon base interior" --seeds 1,2,3,4 --columns 2 --output outputs/moon_grid.png
+  ./launch.sh api
   ./launch.sh generate "portrait" --model Efficient-Large-Model/Sana_600M_1024px_diffusers --height 1024 --width 1024
   ./launch.sh ui
 EOF
   exit 0
 fi
 
-# ── Require setup to have been run ───────────────────────────────────────────
+# ── Resolve virtual environment ─────────────────────────────────────────────
 
-if [ ! -d ".venv" ]; then
-  echo "ERROR: Virtual environment not found. Run ./setup.sh first."
+if [ -d ".venv" ]; then
+  VENV_PATH=".venv"
+elif [ -d "Sana-main/.venv" ]; then
+  # Compatibility path for environments created in the upstream subtree.
+  VENV_PATH="Sana-main/.venv"
+else
+  echo "ERROR: Virtual environment not found."
+  echo "Tried: .venv and Sana-main/.venv"
+  echo "Run ./setup.sh first."
   exit 1
 fi
 
-VENV_PATH=".venv"
+if [ ! -x "$VENV_PATH/bin/python" ]; then
+  echo "ERROR: Python not found in virtual environment: $VENV_PATH"
+  echo "Recreate it with ./setup.sh"
+  exit 1
+fi
 
 # shellcheck source=/dev/null
 source "$VENV_PATH/bin/activate"
@@ -64,6 +79,18 @@ shift || true
 case "$CMD" in
   generate|gen)
     python run_sana_mps.py "$@"
+    ;;
+
+  grid)
+    python run_sana_grid.py "$@"
+    ;;
+
+  api)
+    if ! python -c "import fastapi, uvicorn" >/dev/null 2>&1; then
+      echo "Installing API dependencies ..."
+      pip install -r requirements-api.txt
+    fi
+    python api_server.py "$@"
     ;;
 
   ui)
@@ -83,8 +110,6 @@ case "$CMD" in
   benchmark)
     python benchmark_sana_m2.py "$@"
     ;;
-
-
 
   *)
     echo "ERROR: Unknown command '$CMD'"

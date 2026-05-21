@@ -11,6 +11,8 @@ chmod +x setup.sh launch.sh smoke_check.sh
 ./setup.sh
 ./launch.sh verify
 ./launch.sh generate "a small robot building a glowing circuit board"
+./launch.sh grid --prompt "moon base interior" --seeds 1,2,3,4 --columns 2 --output outputs/moon_grid.png
+./launch.sh api
 ./launch.sh ui
 ./launch.sh benchmark
 ```
@@ -70,7 +72,7 @@ Expected: MPS built and available are true on a real Apple Silicon runtime.
 
 ```bash
 ./launch.sh generate "moon base interior" \
-	--negative-prompt "blurry, noisy, low quality"
+  --negative-prompt "blurry, noisy, low quality"
 ```
 
 If the current `SanaPipeline` build does not support `negative_prompt`,
@@ -87,8 +89,8 @@ the wrapper logs a warning and continues generation without failing.
 
 # Higher resolution (optional, more memory)
 ./launch.sh generate "prompt" \
-	--model Efficient-Large-Model/Sana_600M_1024px_diffusers \
-	--height 1024 --width 1024 --steps 12
+  --model Efficient-Large-Model/Sana_600M_1024px_diffusers \
+  --height 1024 --width 1024 --steps 12
 ```
 
 ### Launch UI
@@ -99,11 +101,45 @@ the wrapper logs a warning and continues generation without failing.
 
 UI auto-installs Gradio if missing and serves at `http://127.0.0.1:7860`.
 
+The UI now includes a `Library` tab that lets you:
+
+- browse and apply shared prompt presets
+- save the current prompt/settings as a reusable preset
+- inspect recent output metadata sidecars
+- preview recent generated images inside the app
+
+### Launch API
+
+```bash
+./launch.sh api
+```
+
+The API serves at `http://127.0.0.1:7861` and exposes `/health`, `/generate`,
+`/generate/batch`, `/generate/grid`, `/outputs`, `/metadata`, `/presets`, and
+`/gallery`.
+
+The `/gallery` route serves a lightweight browser for recent outputs and links
+directly to image and metadata files.
+
+### Generate Grid
+
+```bash
+./launch.sh grid \
+  --prompt "moon base interior" \
+  --seeds 1,2,3,4 \
+  --steps 12 \
+  --columns 2 \
+  --output outputs/moon_grid.png
+```
+
+This generates one image per seed plus a contact-sheet PNG and JSON metadata.
+
 ## Generation metadata
 
 Every generated image writes a same-name JSON sidecar for reproducibility.
 
 Examples:
+
 - `sana_m2_output.png` and `sana_m2_output.json` (CLI)
 - `outputs/sana_m2_*.png` and `outputs/sana_m2_*.json` (UI)
 
@@ -117,6 +153,7 @@ dtype/device, runtime seconds, and Torch/Diffusers versions.
 ```
 
 Default benchmark set:
+
 - 512x512 at 8 steps
 - 512x512 at 12 steps
 - 512x512 at 20 steps
@@ -162,6 +199,7 @@ Run local smoke checks before packaging:
 ```
 
 This validates:
+
 - shell syntax
 - Python compile checks
 - root dependency guard against CUDA-only packages
@@ -171,27 +209,47 @@ This validates:
 
 ```text
 sana_m2_quickstart/
-	setup.sh
-	launch.sh
-	smoke_check.sh
-	run_sana_mps.py
-	app_m2.py
-	benchmark_sana_m2.py
-	verify_mps.py
-	requirements-macos-mps.txt
-	requirements-ui.txt
-	Sana-main/
-		DO_NOT_RUN_ON_MAC_M2.md
-		...upstream files
+  setup.sh
+  launch.sh
+  smoke_check.sh
+  run_sana_mps.py
+  run_sana_grid.py
+  api_server.py
+  app_m2.py
+  benchmark_sana_m2.py
+  verify_mps.py
+  requirements-macos-mps.txt
+  requirements-ui.txt
+  requirements-api.txt
+  sana_core/
+    __init__.py
+    engine.py
+    gallery.py
+    grid.py
+    metadata.py
+    paths.py
+    presets.py
+    schemas.py
+  presets/
+    prompt_presets.json
+  static/
+    gallery.html
+    gallery.css
+    gallery.js
+  Sana-main/
+    DO_NOT_RUN_ON_MAC_M2.md
+    ...upstream files
 ```
 
 ## Scope and non-goals
 
 Supported baseline:
+
 - Mac inference via Diffusers + MPS
 - CLI, UI, and benchmark paths
 
 Not baseline-supported in this wrapper:
+
 - Native Sana training
 - SANA-Video / LongSANA / SANA-WM workflows
 - CUDA-specific optimizations (flash-attn, xformers, bitsandbytes)
