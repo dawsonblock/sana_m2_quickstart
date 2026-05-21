@@ -29,7 +29,7 @@ if ! command -v $PYTHON_VERSION &> /dev/null; then
 fi
 
 # ── Virtual environment ───────────────────────────────────────────────────────
-# Only use root .venv, never reuse Sana-main/.venv
+# Only use the root virtual environment; never reuse upstream subtree environments.
 
 if [ -d ".venv" ]; then
   if [ -x ".venv/bin/python" ] && ".venv/bin/python" -m pip --version >/dev/null 2>&1; then

@@ -277,7 +277,8 @@ def generate_grid_endpoint(body: GridBody, request: Request) -> Dict[str, Any]:
 
 
 @app.get("/outputs")
-def outputs() -> Dict[str, Any]:
+def outputs(request: Request) -> Dict[str, Any]:
+    require_phone_token_if_enabled(request)
     return {"items": list_gallery_items()}
 
 
@@ -294,7 +295,8 @@ def file_output(image_path: str, request: Request) -> FileResponse:
 
 
 @app.get("/metadata")
-def metadata_list() -> Dict[str, Any]:
+def metadata_list(request: Request) -> Dict[str, Any]:
+    require_phone_token_if_enabled(request)
     items = [
         str(path.relative_to(PROJECT_ROOT))
         for path in list_metadata_files()
@@ -315,7 +317,8 @@ def metadata_file(metadata_filename: str, request: Request) -> Dict[str, Any]:
 
 
 @app.get("/gallery")
-def gallery() -> FileResponse:
+def gallery(request: Request) -> FileResponse:
+    require_phone_token_if_enabled(request)
     return FileResponse(PROJECT_ROOT / "static" / "gallery.html")
 
 
@@ -428,4 +431,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     initialize_phone_mode(args.host, args.port, args.phone)
-    uvicorn.run("api_server:app", host=args.host, port=args.port, reload=False)
+    uvicorn.run(app, host=args.host, port=args.port, reload=False)

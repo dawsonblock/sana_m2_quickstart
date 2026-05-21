@@ -85,6 +85,12 @@ class GalleryPresetTests(unittest.TestCase):
         self.assertIn("title.textContent = prompt", content)
         self.assertNotIn("/file/", content)
 
+    def test_phone_js_gallery_images_include_token_query(self):
+        phone_js = (Path(__file__).resolve().parents[1] / "static" / "phone.js")
+        content = phone_js.read_text(encoding="utf-8")
+
+        self.assertIn("image.src = `/api/phone/file/${imageRel}?token=${encodeURIComponent(state.token)}`", content)
+
 
 if __name__ == "__main__":
     unittest.main()

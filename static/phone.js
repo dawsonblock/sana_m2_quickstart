@@ -185,7 +185,7 @@ async function refreshGallery() {
 
       const image = document.createElement('img');
       const imageRel = encodePath(stripOutputsPrefix(item.image_path));
-      image.src = `/api/phone/file/${imageRel}`;
+      image.src = `/api/phone/file/${imageRel}?token=${encodeURIComponent(state.token)}`;
       image.alt = item.prompt || 'Generated output';
       image.loading = 'lazy';
       image.addEventListener('click', () => {

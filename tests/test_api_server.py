@@ -93,6 +93,7 @@ class ApiServerTests(unittest.TestCase):
 
         self.original_api_root = self.api_server.PROJECT_ROOT
         self.original_api_log_dir = self.api_server.LOG_DIR
+        self.original_phone_mode = self.api_server.PHONE_MODE
         self.original_gallery_root = gallery.PROJECT_ROOT
         self.original_gallery_output = gallery.OUTPUT_DIR
         self.original_preset_dir = presets.PRESET_DIR
@@ -100,6 +101,7 @@ class ApiServerTests(unittest.TestCase):
 
         self.api_server.PROJECT_ROOT = self.root
         self.api_server.LOG_DIR = self.logs
+        self.api_server.PHONE_MODE = False
         gallery.PROJECT_ROOT = self.root
         gallery.OUTPUT_DIR = self.outputs
         presets.PRESET_DIR = self.presets_dir
@@ -108,6 +110,7 @@ class ApiServerTests(unittest.TestCase):
     def tearDown(self):
         self.api_server.PROJECT_ROOT = self.original_api_root
         self.api_server.LOG_DIR = self.original_api_log_dir
+        self.api_server.PHONE_MODE = self.original_phone_mode
         gallery.PROJECT_ROOT = self.original_gallery_root
         gallery.OUTPUT_DIR = self.original_gallery_output
         presets.PRESET_DIR = self.original_preset_dir
@@ -272,6 +275,41 @@ class ApiServerTests(unittest.TestCase):
                 for item in items
             )
         )
+
+    def test_outputs_requires_token_in_phone_mode(self):
+        self.api_server.PHONE_MODE = True
+
+        unauthorized = self.client.get("/outputs")
+        authorized = self.client.get(
+            "/outputs",
+            headers={"X-Sana-Token": "test-phone-token"},
+        )
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(authorized.status_code, 200)
+
+    def test_metadata_requires_token_in_phone_mode(self):
+        self.api_server.PHONE_MODE = True
+
+        unauthorized = self.client.get("/metadata")
+        authorized = self.client.get(
+            "/metadata",
+            headers={"X-Sana-Token": "test-phone-token"},
+        )
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(authorized.status_code, 200)
+
+    def test_gallery_requires_token_in_phone_mode(self):
+        self.api_server.PHONE_MODE = True
+
+        unauthorized = self.client.get("/gallery")
+        authorized = self.client.get(
+            "/gallery?token=test-phone-token",
+        )
+
+        self.assertEqual(unauthorized.status_code, 401)
+        self.assertEqual(authorized.status_code, 200)
 
     def test_grid_rejects_unsafe_output_paths(self):
         absolute_response = self.client.post(
