@@ -30,6 +30,10 @@ python3 -m py_compile \
   sana_core/presets.py \
   sana_core/schemas.py
 
+if [ -f "sana_core/network.py" ]; then
+  python3 -m py_compile sana_core/network.py
+fi
+
 echo "[3/5] Python tests"
 python3 -m unittest discover -s tests -p 'test_*.py'
 
@@ -48,6 +52,18 @@ if grep -R -n "flash-attn\|xformers\|bitsandbytes\|cu128\|cuda-toolkit\|triton\|
   sana_core/*.py; then
   echo ""
   echo "FAIL: Found forbidden CUDA/NVIDIA dependency references in root wrapper files."
+  exit 1
+fi
+
+if grep -R -n "Sana-main/.venv" \
+  run_sana_mps.py \
+  run_sana_grid.py \
+  api_server.py \
+  app_m2.py \
+  benchmark_sana_m2.py \
+  sana_core/*.py; then
+  echo ""
+  echo "FAIL: Root wrapper files must not reference Sana-main/.venv."
   exit 1
 fi
 

@@ -1,10 +1,12 @@
 import importlib
 import json
+import os
 import sys
 import tempfile
 import types
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from sana_core.schemas import GenerationResult
 import sana_core.gallery as gallery
@@ -14,6 +16,7 @@ import sana_core.presets as presets
 class ApiServerTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        os.environ["SANA_PHONE_TOKEN"] = "test-phone-token"
         cls.original_engine_module = sys.modules.get("sana_core.engine")
 
         fake_engine = types.ModuleType("sana_core.engine")
@@ -36,6 +39,7 @@ class ApiServerTests(unittest.TestCase):
         sys.modules["sana_core.engine"] = fake_engine
 
         cls.api_server = importlib.import_module("api_server")
+        cls.api_server.PHONE_TOKEN = "test-phone-token"
 
         from fastapi.testclient import TestClient
 
@@ -43,6 +47,7 @@ class ApiServerTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        os.environ.pop("SANA_PHONE_TOKEN", None)
         if cls.original_engine_module is None:
             sys.modules.pop("sana_core.engine", None)
         else:
@@ -64,6 +69,10 @@ class ApiServerTests(unittest.TestCase):
 
         (self.static / "gallery.html").write_text(
             "<html><body>gallery</body></html>",
+            encoding="utf-8",
+        )
+        (self.static / "phone.html").write_text(
+            "<html><body>phone</body></html>",
             encoding="utf-8",
         )
         (self.outputs / "sample.png").write_bytes(b"fake-png")
@@ -138,7 +147,7 @@ class ApiServerTests(unittest.TestCase):
         metadata_response = self.client.get("/metadata")
         gallery_response = self.client.get("/gallery")
         output_response = self.client.get("/outputs/sample.png")
-        missing_file_route_response = self.client.get("/file/outputs/sample.png")
+        file_route_response = self.client.get("/file/sample.png")
 
         self.assertEqual(save_response.status_code, 200)
         self.assertEqual(presets_response.status_code, 200)
@@ -147,7 +156,7 @@ class ApiServerTests(unittest.TestCase):
         self.assertIn("outputs/sample.json", metadata_response.json()["items"])
         self.assertEqual(gallery_response.status_code, 200)
         self.assertEqual(output_response.status_code, 200)
-        self.assertEqual(missing_file_route_response.status_code, 404)
+        self.assertEqual(file_route_response.status_code, 200)
 
     def test_metadata_endpoint_rejects_non_json_filenames(self):
         response = self.client.get("/metadata/sample.png")
@@ -171,10 +180,103 @@ class ApiServerTests(unittest.TestCase):
         self.assertEqual(batch_response.status_code, 400)
         self.assertEqual(grid_response.status_code, 400)
 
+    def test_phone_endpoint_exists_and_requires_token(self):
+        unauthorized = self.client.get("/phone")
+        self.assertEqual(unauthorized.status_code, 401)
+
+        authorized = self.client.get("/phone?token=test-phone-token")
+        self.assertEqual(authorized.status_code, 200)
+
+    def test_phone_status_rejects_invalid_token_and_accepts_valid_token(self):
+        invalid = self.client.get(
+            "/api/phone/status",
+            headers={"X-Sana-Token": "wrong"},
+        )
+        self.assertEqual(invalid.status_code, 401)
+
+        valid = self.client.get(
+            "/api/phone/status",
+            headers={"X-Sana-Token": "test-phone-token"},
+        )
+        self.assertEqual(valid.status_code, 200)
+        self.assertIn("server_url", valid.json())
+
+    def test_phone_generate_endpoint_calls_shared_engine_path(self):
+        response = self.client.post(
+            "/api/phone/generate",
+            headers={"X-Sana-Token": "test-phone-token"},
+            json={"prompt": "phone prompt", "seed": 33},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["metadata"]["prompt"], "phone prompt")
+
+    def test_phone_grid_endpoint_calls_shared_grid_function(self):
+        with patch.object(
+            self.api_server,
+            "generate_grid_endpoint",
+            return_value={
+                "grid_path": "outputs/grid.png",
+                "items": [{"seed": 1}],
+                "columns": 2,
+                "seeds": [1],
+            },
+        ) as mocked_grid:
+            response = self.client.post(
+                "/api/phone/grid",
+                headers={"X-Sana-Token": "test-phone-token"},
+                json={"prompt": "phone grid", "seeds": [1], "columns": 2},
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json()["grid_image_path"],
+            "outputs/grid.png",
+        )
+        self.assertEqual(
+            response.json()["grid_metadata_path"],
+            "outputs/grid.json",
+        )
+        mocked_grid.assert_called_once()
+
+    def test_phone_file_access_is_outputs_only(self):
+        readme_attempt = self.client.get(
+            "/api/phone/file/README_M2.md",
+            headers={"X-Sana-Token": "test-phone-token"},
+        )
+        sana_main_attempt = self.client.get(
+            "/api/phone/file/Sana-main/README.md",
+            headers={"X-Sana-Token": "test-phone-token"},
+        )
+
+        self.assertEqual(readme_attempt.status_code, 404)
+        self.assertEqual(sana_main_attempt.status_code, 404)
+
+    def test_file_route_cannot_read_project_or_reference_tree(self):
+        readme_attempt = self.client.get("/file/README_M2.md")
+        sana_main_attempt = self.client.get("/file/Sana-main/README.md")
+
+        self.assertEqual(readme_attempt.status_code, 404)
+        self.assertEqual(sana_main_attempt.status_code, 404)
+
+    def test_phone_gallery_only_lists_outputs(self):
+        response = self.client.get(
+            "/api/phone/gallery",
+            headers={"X-Sana-Token": "test-phone-token"},
+        )
+
+        self.assertEqual(response.status_code, 200)
+        items = response.json().get("items", [])
+        self.assertTrue(
+            all(
+                str(item.get("metadata_path", "")).startswith("outputs/")
+                for item in items
+            )
+        )
+
     def test_grid_rejects_unsafe_output_paths(self):
         absolute_response = self.client.post(
             "/generate/grid",
-            json={"prompt": "x", "seeds": [1], "output": "/tmp/evil.png"},
+            json={"prompt": "x", "seeds": [1], "output": "/outside/evil.png"},
         )
         traversal_response = self.client.post(
             "/generate/grid",
@@ -184,7 +286,10 @@ class ApiServerTests(unittest.TestCase):
         self.assertEqual(absolute_response.status_code, 400)
         self.assertIn("relative", absolute_response.json().get("detail", ""))
         self.assertEqual(traversal_response.status_code, 400)
-        self.assertIn("must not contain", traversal_response.json().get("detail", ""))
+        self.assertIn(
+            "must not contain",
+            traversal_response.json().get("detail", ""),
+        )
 
 
 if __name__ == "__main__":

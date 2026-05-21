@@ -13,6 +13,7 @@ chmod +x setup.sh launch.sh smoke_check.sh
 ./launch.sh generate "a small robot building a glowing circuit board"
 ./launch.sh grid --prompt "moon base interior" --seeds 1,2,3,4 --columns 2 --output outputs/moon_grid.png
 ./launch.sh api
+./launch.sh phone
 ./launch.sh ui
 ./launch.sh benchmark
 ```
@@ -121,6 +122,29 @@ The API serves at `http://127.0.0.1:7861` and exposes `/health`, `/generate`,
 The `/gallery` route serves a lightweight browser for recent outputs and links
 directly to image and metadata files.
 
+### Launch Phone Mode
+
+```bash
+./launch.sh phone
+```
+
+Phone mode starts the API on `0.0.0.0:7861`, prints your Mac LAN URL, and
+shows a terminal QR code when `qrcode[pil]` is installed.
+
+Use phone mode safely:
+
+1. Keep the Mac and phone on the same Wi-Fi network.
+2. Open the printed URL (or scan the QR code) from your phone.
+3. Use the token from `SANA_PHONE_TOKEN` or the temporary startup token.
+4. Do not port-forward the server.
+
+Safe Recovery defaults in phone UI:
+
+1. `512x512`
+2. `8` steps
+3. Force FP32
+4. `Efficient-Large-Model/Sana_600M_512px_diffusers`
+
 ### Generate Grid
 
 ```bash
@@ -189,6 +213,14 @@ Note: float32 is usually slower and may use more memory than float16.
 - Confirm arm64 Python: `python3 -c 'import platform; print(platform.machine())'`
 - Reinstall PyTorch packages in this environment
 - Ensure you are on Apple Silicon with a supported macOS version
+
+### Phone cannot connect
+
+- Confirm both devices are on the same Wi-Fi network.
+- Check macOS firewall settings.
+- Open the Mac LAN IP URL manually if QR does not work.
+- Confirm server startup prints `--host 0.0.0.0` in phone mode.
+- Try Safari or Chrome on phone.
 
 ## One-command static validation
 

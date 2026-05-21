@@ -17,6 +17,7 @@ Commands:
   generate "your prompt"   Generate an image from a text prompt
   grid                     Generate multiple images and a grid contact sheet
   api                      Launch the FastAPI server (http://127.0.0.1:7861)
+  phone                    Launch LAN phone control mode (http://<LAN_IP>:7861/phone)
   ui                       Launch the Gradio web UI (http://127.0.0.1:7860)
   verify                   Check MPS / Metal availability
   benchmark                Run the M2 performance benchmark
@@ -39,6 +40,7 @@ Examples:
   ./launch.sh generate "moon base interior" --steps 8 --height 512 --width 512
   ./launch.sh grid --prompt "moon base interior" --seeds 1,2,3,4 --columns 2 --output outputs/moon_grid.png
   ./launch.sh api
+  ./launch.sh phone
   ./launch.sh generate "portrait" --model Efficient-Large-Model/Sana_600M_1024px_diffusers --height 1024 --width 1024
   ./launch.sh ui
 EOF
@@ -86,7 +88,15 @@ case "$CMD" in
       echo "Installing API dependencies ..."
       pip install -r requirements-api.txt
     fi
-    python api_server.py "$@"
+    python api_server.py --host 127.0.0.1 --port 7861 "$@"
+    ;;
+
+  phone)
+    if ! python -c "import fastapi, uvicorn" >/dev/null 2>&1; then
+      echo "Installing API dependencies ..."
+      pip install -r requirements-api.txt
+    fi
+    python api_server.py --host 0.0.0.0 --port 7861 --phone "$@"
     ;;
 
   ui)

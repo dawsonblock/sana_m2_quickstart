@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Sana Phone Control</title>
+  <link rel="stylesheet" href="/static/phone.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <p class="eyebrow">Sana M2 Phone</p>
+      <h1>LAN Control Panel</h1>
+      <p class="note">Local Wi-Fi only. Do not port-forward this server.</p>
+    </header>
+
+    <section class="card auth-card">
+      <label for="tokenInput">Access token</label>
+      <div class="row">
+        <input id="tokenInput" type="text" placeholder="Paste SANA_PHONE_TOKEN" autocomplete="off">
+        <button id="saveTokenButton" type="button">Save</button>
+      </div>
+      <p id="authStatus" class="muted">Token required for all phone actions.</p>
+    </section>
+
+    <section class="card">
+      <label for="presetSelect">Load preset</label>
+      <div class="row">
+        <select id="presetSelect"></select>
+        <button id="loadPresetButton" type="button">Load</button>
+      </div>
+      <button id="savePresetButton" type="button" class="secondary">Save current as preset</button>
+    </section>
+
+    <section class="card form-card">
+      <label for="promptInput">Prompt</label>
+      <textarea id="promptInput" rows="4" placeholder="Describe the image"></textarea>
+
+      <label for="negativeInput">Negative prompt</label>
+      <textarea id="negativeInput" rows="3" placeholder="blurry, noisy, low quality"></textarea>
+
+      <label for="modelSelect">Model</label>
+      <select id="modelSelect"></select>
+
+      <label for="resolutionSelect">Resolution</label>
+      <select id="resolutionSelect">
+        <option value="512x512">512x512</option>
+        <option value="768x768">768x768</option>
+        <option value="1024x1024">1024x1024</option>
+      </select>
+
+      <label for="stepsSelect">Steps</label>
+      <select id="stepsSelect">
+        <option value="8">8</option>
+        <option value="12" selected>12</option>
+        <option value="20">20</option>
+      </select>
+
+      <label for="guidanceInput">Guidance <span id="guidanceValue">4.5</span></label>
+      <input id="guidanceInput" type="range" min="1" max="12" step="0.1" value="4.5">
+
+      <label for="seedInput">Seed</label>
+      <div class="row">
+        <input id="seedInput" type="number" min="0" step="1" value="42">
+        <button id="randomSeedButton" type="button" class="secondary">Random</button>
+      </div>
+
+      <label for="precisionSelect">Precision</label>
+      <select id="precisionSelect">
+        <option value="auto" selected>Auto</option>
+        <option value="float32">Force FP32</option>
+      </select>
+
+      <label for="gridSeedsInput">Grid seeds (comma separated)</label>
+      <input id="gridSeedsInput" type="text" value="1,2,3,4">
+
+      <label for="gridColumnsInput">Grid columns</label>
+      <input id="gridColumnsInput" type="number" min="1" step="1" value="2">
+
+      <div class="actions">
+        <button id="generateButton" type="button">Generate</button>
+        <button id="gridButton" type="button">Generate Grid</button>
+        <button id="safeRecoveryButton" type="button" class="secondary">Safe Recovery</button>
+      </div>
+      <p id="progressText" class="muted">Idle</p>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>Runtime Status</h2>
+        <button id="refreshStatusButton" type="button" class="secondary">Refresh</button>
+      </div>
+      <dl id="statusPanel" class="status"></dl>
+    </section>
+
+    <section class="card">
+      <div class="section-header">
+        <h2>Gallery</h2>
+        <button id="refreshGalleryButton" type="button" class="secondary">Refresh</button>
+      </div>
+      <div id="gallery" class="gallery"></div>
+    </section>
+
+    <section id="metadataCard" class="card hidden">
+      <div class="section-header">
+        <h2>Metadata</h2>
+        <button id="closeMetadataButton" type="button" class="secondary">Close</button>
+      </div>
+      <pre id="metadataContent"></pre>
+    </section>
+  </main>
+
+  <script src="/static/phone.js"></script>
+</body>
+</html>
