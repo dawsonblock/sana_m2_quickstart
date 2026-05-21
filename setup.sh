@@ -19,12 +19,16 @@ if ! xcode-select -p &>/dev/null; then
   exit 1
 fi
 
-if ! command -v python3.11 &>/dev/null; then
-  echo "ERROR: Python 3.11 not found."
-  echo "       Install via: brew install python@3.11"
-  echo "       Then re-run this script."
-  exit 1
+PYTHON_VERSION="python3.11"
+if ! command -v $PYTHON_VERSION &> /dev/null; then
+    PYTHON_VERSION="python3.12"
+    if ! command -v $PYTHON_VERSION &> /dev/null; then
+        echo "Error: Neither python3.11 nor python3.12 is installed. Please install one of these versions."
+        exit 1
+    fi
 fi
+# Use the selected Python version
+$PYTHON_VERSION -m venv .venv
 
 # ── Virtual environment ───────────────────────────────────────────────────────
 # Only use root .venv, never reuse Sana-main/.venv
@@ -36,11 +40,11 @@ if [ -d ".venv" ]; then
     echo "Existing .venv appears broken; recreating it ..."
     rm -rf .venv
     echo "Creating virtual environment (.venv) ..."
-    python3.11 -m venv .venv
+    $PYTHON_VERSION -m venv .venv
   fi
 else
   echo "Creating virtual environment (.venv) ..."
-  python3.11 -m venv .venv
+  $PYTHON_VERSION -m venv .venv
 fi
 
 source ".venv/bin/activate"

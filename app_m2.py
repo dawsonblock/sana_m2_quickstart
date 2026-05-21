@@ -7,6 +7,7 @@ import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
@@ -195,7 +196,8 @@ def generate_image(
 
         elapsed = time.perf_counter() - started
         safe_time = time.strftime("%Y%m%d-%H%M%S")
-        out_path = OUTPUT_DIR / f"sana_m2_{safe_time}_seed{seed}_{width}x{height}.png"
+        unique_id = uuid4().hex[:8]
+        out_path = OUTPUT_DIR / f"sana_m2_{safe_time}_{unique_id}.png"
         image = result.images[0]
         image.save(out_path)
 
