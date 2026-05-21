@@ -151,9 +151,11 @@ def main() -> None:
         "num_inference_steps": args.steps,
         "generator": generator,
     }
+    negative_prompt_used = False
     if args.negative_prompt:
         if supports_negative_prompt(pipe):
             pipe_kwargs["negative_prompt"] = args.negative_prompt
+            negative_prompt_used = True
         else:
             print("Warning: negative_prompt is not supported by this SanaPipeline version.")
 
@@ -177,7 +179,9 @@ def main() -> None:
     dtype_name = "float16" if dtype == torch.float16 else "float32"
     metadata = {
         "prompt": prompt,
-        "negative_prompt": args.negative_prompt or None,
+        "negative_prompt": args.negative_prompt if negative_prompt_used else None,
+        "negative_prompt_requested": args.negative_prompt or None,
+        "negative_prompt_used": negative_prompt_used,
         "model": args.model,
         "height": args.height,
         "width": args.width,

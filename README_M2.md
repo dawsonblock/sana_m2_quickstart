@@ -20,7 +20,8 @@ chmod +x setup.sh launch.sh smoke_check.sh
 - macOS 13 or newer (Sonoma/Sequoia recommended)
 - Apple Silicon (M1, M2, M3, M4)
 - Xcode Command Line Tools: `xcode-select --install`
-- Python 3.11: `brew install python@3.11`
+- Python 3.11 recommended: `brew install python@3.11`
+- Python 3.12 is also supported by `setup.sh` as a fallback
 
 ## What this wrapper does
 
