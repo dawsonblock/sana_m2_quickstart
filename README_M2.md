@@ -7,6 +7,7 @@ This project is a Mac-first wrapper around upstream Sana code. It is designed fo
 ## Quick start
 
 ```bash
+chmod +x setup.sh launch.sh smoke_check.sh
 ./setup.sh
 ./launch.sh verify
 ./launch.sh generate "a small robot building a glowing circuit board"
@@ -175,4 +176,5 @@ Not baseline-supported in this wrapper:
 
 ## License
 
-See root LICENSE and `Sana-main/LICENSE`.
+See `Sana-main/LICENSE` for upstream Sana licensing.
+Wrapper scripts in this repository are provided as project utility files.

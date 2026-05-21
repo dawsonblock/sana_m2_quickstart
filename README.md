@@ -14,6 +14,7 @@ This wrapper is built for Apple Silicon inference and intentionally avoids CUDA-
 ## Quick Start
 
 ```bash
+chmod +x setup.sh launch.sh smoke_check.sh
 ./setup.sh
 ./launch.sh verify
 ./launch.sh generate "a small robot building a glowing circuit board"
@@ -73,4 +74,5 @@ This checks shell syntax, Python compile health, and guards against CUDA-only ro
 
 ## License
 
-See LICENSE and Sana-main/LICENSE.
+See `Sana-main/LICENSE` for upstream Sana licensing.
+Wrapper scripts in this repository are provided as project utility files.
