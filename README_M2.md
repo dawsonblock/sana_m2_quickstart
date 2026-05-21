@@ -176,5 +176,5 @@ Not baseline-supported in this wrapper:
 
 ## License
 
-See `Sana-main/LICENSE` for upstream Sana licensing.
-Wrapper scripts in this repository are provided as project utility files.
+- Wrapper scripts in this repository are licensed under MIT: `LICENSE`
+- Upstream Sana code under `Sana-main/` follows its own upstream license: `Sana-main/LICENSE`
