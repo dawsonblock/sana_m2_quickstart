@@ -1,7 +1,11 @@
 import gc
+import inspect
+import json
 import os
 import random
 import time
+import traceback
+from datetime import datetime, timezone
 from pathlib import Path
 
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
@@ -9,7 +13,7 @@ os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
 import gradio as gr
 import torch
-from diffusers import SanaPipeline
+from diffusers import SanaPipeline, __version__ as diffusers_version
 
 
 def load_sana_pipeline(model_id: str, dtype: torch.dtype):
@@ -26,13 +30,34 @@ def load_sana_pipeline(model_id: str, dtype: torch.dtype):
         load_kwargs["variant"] = "fp16"
     try:
         return SanaPipeline.from_pretrained(model_id, **load_kwargs)
-    except (OSError, ValueError):
+    except (OSError, ValueError) as first_error:
         # Fallback if model repo does not expose a separate fp16 variant
         if "variant" in load_kwargs:
-            print(f"Warning: fp16 variant not available, loading without variant")
+            print("Warning: fp16 variant not available, loading without variant")
             load_kwargs.pop("variant", None)
-            return SanaPipeline.from_pretrained(model_id, **load_kwargs)
-        raise
+            try:
+                return SanaPipeline.from_pretrained(model_id, **load_kwargs)
+            except (OSError, ValueError) as second_error:
+                raise RuntimeError(
+                    "Failed to load Sana model after fp16 fallback. "
+                    "Check model id, internet access, and Hugging Face auth (HF_TOKEN)."
+                ) from second_error
+        raise RuntimeError(
+            "Failed to load Sana model. "
+            "Check model id, internet access, and Hugging Face auth (HF_TOKEN)."
+        ) from first_error
+
+
+def supports_negative_prompt(pipe: SanaPipeline) -> bool:
+    """Return whether this pipeline accepts negative_prompt at call time."""
+    try:
+        callable_fn = getattr(pipe, "__call__", None)
+        if callable_fn is None or not callable(callable_fn):
+            return False
+        call_params = inspect.signature(callable_fn).parameters
+    except (TypeError, ValueError):
+        return False
+    return "negative_prompt" in call_params
 
 
 MODEL_OPTIONS = {
@@ -53,12 +78,18 @@ DEFAULT_PROMPT = (
 )
 
 OUTPUT_DIR = Path("outputs")
-PIPE_CACHE = {}
+LOG_DIR = Path("logs")
+PIPE_CACHE: dict = {}
+
+
+def append_jsonl(path: Path, payload: dict) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
 
 
 def clear_pipeline_cache():
     """Clear the model cache to free unified memory on Mac."""
-    global PIPE_CACHE
     PIPE_CACHE.clear()
     gc.collect()
     if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
@@ -86,7 +117,10 @@ def load_pipeline(model_label, precision_mode, progress):
         clear_pipeline_cache()
 
     progress(0.05, desc=f"Loading {model_label}")
-    pipe = load_sana_pipeline(model_id, dtype)
+    try:
+        pipe = load_sana_pipeline(model_id, dtype)
+    except RuntimeError as error:
+        raise gr.Error(str(error)) from error
     pipe = pipe.to(device)
 
     if hasattr(pipe, "enable_attention_slicing"):
@@ -100,15 +134,19 @@ def load_pipeline(model_label, precision_mode, progress):
 
 def generate_image(
     prompt,
+    negative_prompt,
     model_label,
     resolution_label,
     steps,
     guidance,
     seed,
     precision_mode,
-    progress=gr.Progress(track_tqdm=True),
+    progress=None,
 ):
+    if progress is None:
+        progress = gr.Progress(track_tqdm=True)
     prompt = (prompt or "").strip()
+    negative_prompt = (negative_prompt or "").strip()
     if not prompt:
         raise gr.Error("Enter a prompt before generating.")
 
@@ -116,33 +154,110 @@ def generate_image(
     seed = int(seed)
     steps = int(steps)
     guidance = float(guidance)
+    if height <= 0 or width <= 0:
+        raise gr.Error("Height and width must be positive integers.")
+    if height % 32 != 0 or width % 32 != 0:
+        raise gr.Error("Height and width must be divisible by 32.")
+    if steps <= 0:
+        raise gr.Error("Steps must be greater than 0.")
+    if guidance <= 0:
+        raise gr.Error("Guidance must be greater than 0.")
+    if seed < 0:
+        raise gr.Error("Seed must be a non-negative integer.")
     OUTPUT_DIR.mkdir(exist_ok=True)
 
     started = time.perf_counter()
-    pipe, device, dtype = load_pipeline(model_label, precision_mode, progress)
+    try:
+        pipe, device, dtype = load_pipeline(model_label, precision_mode, progress)
 
-    progress(0.35, desc="Generating image")
-    image = pipe(
-        prompt=prompt,
-        height=height,
-        width=width,
-        guidance_scale=guidance,
-        num_inference_steps=steps,
-        generator=torch.Generator(device="cpu").manual_seed(seed),
-    ).images[0]
+        progress(0.35, desc="Generating image")
+        pipe_kwargs = {
+            "prompt": prompt,
+            "height": height,
+            "width": width,
+            "guidance_scale": guidance,
+            "num_inference_steps": steps,
+            "generator": torch.Generator(device="cpu").manual_seed(seed),
+        }
+        negative_prompt_used = False
+        if negative_prompt:
+            if supports_negative_prompt(pipe):
+                pipe_kwargs["negative_prompt"] = negative_prompt
+                negative_prompt_used = True
+            else:
+                print("Warning: negative_prompt is not supported by this SanaPipeline version.")
 
-    elapsed = time.perf_counter() - started
-    safe_time = time.strftime("%Y%m%d-%H%M%S")
-    out_path = OUTPUT_DIR / f"sana_m2_{safe_time}_seed{seed}_{width}x{height}.png"
-    image.save(out_path)
+        result = pipe(**pipe_kwargs)
+        if not hasattr(result, "images") or not result.images:
+            raise gr.Error(
+                "Pipeline returned no images. Try fewer steps, lower resolution, or Force FP32."
+            )
 
-    status = (
-        f"Saved {out_path.name}\n"
-        f"Model: {model_label}\n"
-        f"Resolution: {width}x{height}, steps: {steps}, guidance: {guidance}\n"
-        f"Seed: {seed}, device: {device}, dtype: {dtype}, time: {elapsed:.1f}s"
-    )
-    return str(out_path), str(out_path), status
+        elapsed = time.perf_counter() - started
+        safe_time = time.strftime("%Y%m%d-%H%M%S")
+        out_path = OUTPUT_DIR / f"sana_m2_{safe_time}_seed{seed}_{width}x{height}.png"
+        image = result.images[0]
+        image.save(out_path)
+
+        dtype_name = "float16" if dtype == torch.float16 else "float32"
+        metadata = {
+            "prompt": prompt,
+            "negative_prompt": negative_prompt if negative_prompt_used else None,
+            "model": MODEL_OPTIONS[model_label],
+            "height": height,
+            "width": width,
+            "steps": steps,
+            "guidance": guidance,
+            "seed": seed,
+            "dtype": dtype_name,
+            "device": device,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "runtime_seconds": round(elapsed, 4),
+            "torch_version": torch.__version__,
+            "diffusers_version": diffusers_version,
+        }
+        metadata_path = out_path.with_suffix(".json")
+        with metadata_path.open("w", encoding="utf-8") as handle:
+            json.dump(metadata, handle, indent=2)
+        append_jsonl(LOG_DIR / "generations.jsonl", metadata)
+
+        status = (
+            f"Saved {out_path.name}\n"
+            f"Metadata: {metadata_path.name}\n"
+            f"Model: {model_label}\n"
+            f"Resolution: {width}x{height}, steps: {steps}, guidance: {guidance}\n"
+            f"Seed: {seed}, device: {device}, dtype: {dtype_name}, time: {elapsed:.1f}s"
+        )
+        return str(out_path), str(out_path), status
+    except gr.Error as error:
+        append_jsonl(
+            LOG_DIR / "errors.jsonl",
+            {
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(error),
+                "model": MODEL_OPTIONS.get(model_label, model_label),
+                "resolution": resolution_label,
+                "steps": steps,
+                "guidance": guidance,
+                "seed": seed,
+            },
+        )
+        raise
+    except Exception as error:  # pragma: no cover - defensive UI path
+        append_jsonl(
+            LOG_DIR / "errors.jsonl",
+            {
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "error": str(error),
+                "traceback": traceback.format_exc(),
+                "model": MODEL_OPTIONS.get(model_label, model_label),
+                "resolution": resolution_label,
+                "steps": steps,
+                "guidance": guidance,
+                "seed": seed,
+            },
+        )
+        raise gr.Error(f"Generation failed: {error}") from error
 
 
 def random_seed():
@@ -285,10 +400,17 @@ with gr.Blocks(
                             max_lines=8,
                             placeholder="Describe the image you want to generate...",
                         )
+                        negative_prompt = gr.Textbox(
+                            label="Negative Prompt (optional)",
+                            value="",
+                            lines=2,
+                            max_lines=4,
+                            placeholder="Describe what to avoid in the image...",
+                        )
 
                         with gr.Row():
                             generate_btn = gr.Button("Generate", variant="primary")
-                            clear_btn = gr.ClearButton(value="Clear", components=[prompt])
+                            clear_btn = gr.ClearButton(value="Clear", components=[prompt, negative_prompt])
 
                         with gr.Accordion("Settings", open=True):
                             model_label = gr.Dropdown(
@@ -434,7 +556,7 @@ with gr.Blocks(
         )
         generate_btn.click(
             fn=generate_image,
-            inputs=[prompt, model_label, resolution_label, steps, guidance, seed, precision_mode],
+            inputs=[prompt, negative_prompt, model_label, resolution_label, steps, guidance, seed, precision_mode],
             outputs=[output_image, output_file, status],
         )
 

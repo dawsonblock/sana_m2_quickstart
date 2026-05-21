@@ -9,6 +9,7 @@ echo ""
 echo "[1/4] Bash syntax"
 bash -n setup.sh
 bash -n launch.sh
+bash -n smoke_check.sh
 
 echo "[2/4] Python compile"
 python3 -m py_compile \

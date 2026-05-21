@@ -26,6 +26,7 @@ Generate options (all optional):
   --width  N               Image width  in pixels (default: 512)
   --steps  N               Inference steps        (default: 20)
   --guidance FLOAT         Guidance scale         (default: 4.5)
+  --negative-prompt TEXT   Optional negative prompt (when supported)
   --seed   N               Random seed            (default: 42)
   --dtype  float16|float32 Precision              (default: float16 on MPS)
   --output FILE            Output filename        (default: sana_m2_output.png)

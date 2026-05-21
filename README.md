@@ -28,9 +28,13 @@ chmod +x setup.sh launch.sh smoke_check.sh
 ./launch.sh verify
 ./launch.sh generate "your prompt"
 ./launch.sh generate --prompt "your prompt" --steps 8
+./launch.sh generate "your prompt" --negative-prompt "blurry, low quality"
 ./launch.sh ui
 ./launch.sh benchmark
 ```
+
+Each generation now writes a PNG plus a same-name JSON metadata sidecar.
+Example: `sana_m2_output.png` and `sana_m2_output.json`.
 
 ## Recommended baseline
 
@@ -44,6 +48,10 @@ If output is unstable, use float32 for numerical stability:
 ```bash
 ./launch.sh generate "your prompt" --steps 8 --dtype float32
 ```
+
+Negative prompts are passed only when supported by the installed
+`SanaPipeline` version. If unsupported, generation continues and prints
+a warning.
 
 ## Important safety note
 

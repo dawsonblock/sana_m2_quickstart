@@ -65,6 +65,16 @@ Expected: MPS built and available are true on a real Apple Silicon runtime.
 ./launch.sh generate --prompt "moon base interior" --steps 8
 ```
 
+### Generate with negative prompt (optional)
+
+```bash
+./launch.sh generate "moon base interior" \
+	--negative-prompt "blurry, noisy, low quality"
+```
+
+If the current `SanaPipeline` build does not support `negative_prompt`,
+the wrapper logs a warning and continues generation without failing.
+
 ### Common options
 
 ```bash
@@ -87,6 +97,17 @@ Expected: MPS built and available are true on a real Apple Silicon runtime.
 ```
 
 UI auto-installs Gradio if missing and serves at `http://127.0.0.1:7860`.
+
+## Generation metadata
+
+Every generated image writes a same-name JSON sidecar for reproducibility.
+
+Examples:
+- `sana_m2_output.png` and `sana_m2_output.json` (CLI)
+- `outputs/sana_m2_*.png` and `outputs/sana_m2_*.json` (UI)
+
+Metadata includes prompt, model, dimensions, steps, guidance, seed,
+dtype/device, runtime seconds, and Torch/Diffusers versions.
 
 ### Run benchmark
 
