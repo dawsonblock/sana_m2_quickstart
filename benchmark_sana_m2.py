@@ -44,7 +44,7 @@ def load_sana_pipeline(model_id: str, dtype: torch.dtype):
         load_kwargs["variant"] = "fp16"
     try:
         return SanaPipeline.from_pretrained(model_id, **load_kwargs)
-    except OSError:
+    except (OSError, ValueError):
         # Fallback if model repo does not expose a separate fp16 variant
         load_kwargs.pop("variant", None)
         return SanaPipeline.from_pretrained(model_id, **load_kwargs)
