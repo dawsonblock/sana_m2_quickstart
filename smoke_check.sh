@@ -19,7 +19,7 @@ python3 -m py_compile \
   app_m2.py
 
 echo "[3/4] Root dependency guard (no CUDA-only packages)"
-if grep -R -n "flash-attn\|xformers\|bitsandbytes\|cu128\|cuda-toolkit" \
+if grep -R -n "flash-attn\|xformers\|bitsandbytes\|cu128\|cuda-toolkit\|triton\|mmcv" \
   requirements-macos-mps.txt setup.sh launch.sh run_sana_mps.py app_m2.py benchmark_sana_m2.py; then
   echo ""
   echo "FAIL: Found forbidden CUDA/NVIDIA dependency references in root wrapper files."

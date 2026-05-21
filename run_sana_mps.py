@@ -168,6 +168,8 @@ def main() -> None:
         )
 
     output_path = resolve_output_path(args.output)
+    if output_path.suffix.lower() != ".png":
+        raise ValueError("--output must end with .png")
     image = result.images[0]
     image.save(output_path)
 

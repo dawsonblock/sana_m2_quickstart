@@ -39,12 +39,11 @@ if [ -d ".venv" ]; then
   else
     echo "Existing .venv appears broken; recreating it ..."
     rm -rf .venv
-    echo "Creating virtual environment (.venv) ..."
-    $PYTHON_VERSION -m venv .venv
+    "$PYTHON_VERSION" -m venv .venv
   fi
 else
   echo "Creating virtual environment (.venv) ..."
-  $PYTHON_VERSION -m venv .venv
+  "$PYTHON_VERSION" -m venv .venv
 fi
 
 source ".venv/bin/activate"
