@@ -1,61 +1,28 @@
-import gc
 import inspect
-import json
 import os
 import random
 import time
 import traceback
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+
+import gradio as gr
 
 os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-import gradio as gr
-import torch
-from diffusers import SanaPipeline, __version__ as diffusers_version
+
+def load_sana_pipeline(model_id, dtype):
+    from sana_core.engine import load_sana_pipeline as core_load_sana_pipeline
+
+    return core_load_sana_pipeline(model_id, dtype)
 
 
-def load_sana_pipeline(model_id: str, dtype: torch.dtype):
-    """Load Sana pipeline with fallback for missing fp16 variant.
-    
-    Tries to load with variant="fp16" for float16 dtype.
-    Falls back to loading without variant if the repo does not expose it.
-    """
-    load_kwargs = {
-        "torch_dtype": dtype,
-        "use_safetensors": True,
-    }
-    if dtype == torch.float16:
-        load_kwargs["variant"] = "fp16"
+def supports_negative_prompt(pipe) -> bool:
     try:
-        return SanaPipeline.from_pretrained(model_id, **load_kwargs)
-    except (OSError, ValueError) as first_error:
-        # Fallback if model repo does not expose a separate fp16 variant
-        if "variant" in load_kwargs:
-            print("Warning: fp16 variant not available, loading without variant")
-            load_kwargs.pop("variant", None)
-            try:
-                return SanaPipeline.from_pretrained(model_id, **load_kwargs)
-            except (OSError, ValueError) as second_error:
-                raise RuntimeError(
-                    "Failed to load Sana model after fp16 fallback. "
-                    "Check model id, internet access, and Hugging Face auth (HF_TOKEN)."
-                ) from second_error
-        raise RuntimeError(
-            "Failed to load Sana model. "
-            "Check model id, internet access, and Hugging Face auth (HF_TOKEN)."
-        ) from first_error
-
-
-def supports_negative_prompt(pipe: SanaPipeline) -> bool:
-    """Return whether this pipeline accepts negative_prompt at call time."""
-    try:
-        callable_fn = getattr(pipe, "__call__", None)
-        if callable_fn is None or not callable(callable_fn):
+        if not callable(pipe):
             return False
-        call_params = inspect.signature(callable_fn).parameters
+        call_params = inspect.signature(pipe.__call__).parameters
     except (TypeError, ValueError):
         return False
     return "negative_prompt" in call_params
@@ -84,52 +51,40 @@ PIPE_CACHE: dict = {}
 
 
 def append_jsonl(path: Path, payload: dict) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a", encoding="utf-8") as handle:
-        handle.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    from sana_core.metadata import append_jsonl as core_append_jsonl
+
+    core_append_jsonl(path, payload)
 
 
 def clear_pipeline_cache():
     """Clear the model cache to free unified memory on Mac."""
-    PIPE_CACHE.clear()
-    gc.collect()
-    if hasattr(torch, "mps") and hasattr(torch.mps, "empty_cache"):
-        torch.mps.empty_cache()
+    from sana_core.engine import clear_pipeline_cache as core_clear_pipeline_cache
+
+    core_clear_pipeline_cache()
 
 
 def get_device_and_dtype(precision_mode="Auto"):
-    if torch.backends.mps.is_available():
-        dtype = torch.float32 if precision_mode == "Force FP32" else torch.float16
-        return "mps", dtype
-    return "cpu", torch.float32
+    from sana_core.engine import dtype_from_string, get_device
+
+    device = get_device()
+    requested_dtype = (
+        "float32" if precision_mode == "Force FP32" else "float16"
+    )
+    dtype = dtype_from_string(requested_dtype, device)
+    return device, dtype
 
 
 def load_pipeline(model_label, precision_mode, progress):
+    from sana_core.engine import get_pipeline as core_get_pipeline
+
     model_id = MODEL_OPTIONS[model_label]
     device, dtype = get_device_and_dtype(precision_mode)
-    cache_key = (model_id, device, str(dtype))
-
-    if cache_key in PIPE_CACHE:
-        return PIPE_CACHE[cache_key], device, dtype
-
-    # Clear previous model before loading new one (one-model-at-a-time policy)
-    if PIPE_CACHE:
-        progress(0.02, desc="Clearing previous model")
-        clear_pipeline_cache()
-
-    progress(0.05, desc=f"Loading {model_label}")
+    if progress is not None:
+        progress(0.02, desc="Loading shared engine")
     try:
-        pipe = load_sana_pipeline(model_id, dtype)
+        pipe = core_get_pipeline(model_id, dtype, device)
     except RuntimeError as error:
         raise gr.Error(str(error)) from error
-    pipe = pipe.to(device)
-
-    if hasattr(pipe, "enable_attention_slicing"):
-        pipe.enable_attention_slicing()
-    if hasattr(pipe, "vae") and hasattr(pipe.vae, "enable_slicing"):
-        pipe.vae.enable_slicing()
-
-    PIPE_CACHE[cache_key] = pipe
     return pipe, device, dtype
 
 
@@ -144,6 +99,10 @@ def generate_image(
     precision_mode,
     progress=None,
 ):
+    from sana_core.engine import generate_image as core_generate_image
+    from sana_core.schemas import GenerationRequest
+    import torch
+
     if progress is None:
         progress = gr.Progress(track_tqdm=True)
     prompt = (prompt or "").strip()
@@ -165,70 +124,37 @@ def generate_image(
         raise gr.Error("Guidance must be greater than 0.")
     if seed < 0:
         raise gr.Error("Seed must be a non-negative integer.")
-    OUTPUT_DIR.mkdir(exist_ok=True)
 
     started = time.perf_counter()
     try:
-        pipe, device, dtype = load_pipeline(model_label, precision_mode, progress)
-
-        progress(0.35, desc="Generating image")
-        pipe_kwargs = {
-            "prompt": prompt,
-            "height": height,
-            "width": width,
-            "guidance_scale": guidance,
-            "num_inference_steps": steps,
-            "generator": torch.Generator(device="cpu").manual_seed(seed),
-        }
-        negative_prompt_used = False
-        if negative_prompt:
-            if supports_negative_prompt(pipe):
-                pipe_kwargs["negative_prompt"] = negative_prompt
-                negative_prompt_used = True
-            else:
-                print("Warning: negative_prompt is not supported by this SanaPipeline version.")
-
-        result = pipe(**pipe_kwargs)
-        if not hasattr(result, "images") or not result.images:
-            raise gr.Error(
-                "Pipeline returned no images. Try fewer steps, lower resolution, or Force FP32."
-            )
-
+        _, device, dtype = load_pipeline(model_label, precision_mode, progress)
+        req = GenerationRequest(
+            prompt=prompt,
+            negative_prompt=negative_prompt or None,
+            model=MODEL_OPTIONS[model_label],
+            height=height,
+            width=width,
+            steps=steps,
+            guidance=guidance,
+            seed=seed,
+            dtype="float16" if dtype == torch.float16 else "float32",
+        )
+        result = core_generate_image(req, progress=progress)
         elapsed = time.perf_counter() - started
-        safe_time = time.strftime("%Y%m%d-%H%M%S")
-        unique_id = uuid4().hex[:8]
-        out_path = OUTPUT_DIR / f"sana_m2_{safe_time}_{unique_id}.png"
-        image = result.images[0]
-        image.save(out_path)
-
-        dtype_name = "float16" if dtype == torch.float16 else "float32"
-        metadata = {
-            "prompt": prompt,
-            "negative_prompt": negative_prompt if negative_prompt_used else None,
-            "model": MODEL_OPTIONS[model_label],
-            "height": height,
-            "width": width,
-            "steps": steps,
-            "guidance": guidance,
-            "seed": seed,
-            "dtype": dtype_name,
-            "device": device,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "runtime_seconds": round(elapsed, 4),
-            "torch_version": torch.__version__,
-            "diffusers_version": diffusers_version,
-        }
-        metadata_path = out_path.with_suffix(".json")
-        with metadata_path.open("w", encoding="utf-8") as handle:
-            json.dump(metadata, handle, indent=2)
-        append_jsonl(LOG_DIR / "generations.jsonl", metadata)
+        out_path = Path(result.image_path)
+        metadata_path = Path(result.metadata_path)
+        metadata = dict(result.metadata)
+        metadata["runtime_seconds"] = round(elapsed, 4)
+        dtype_name = metadata.get("dtype", "float32")
 
         status = (
             f"Saved {out_path.name}\n"
             f"Metadata: {metadata_path.name}\n"
             f"Model: {model_label}\n"
-            f"Resolution: {width}x{height}, steps: {steps}, guidance: {guidance}\n"
-            f"Seed: {seed}, device: {device}, dtype: {dtype_name}, time: {elapsed:.1f}s"
+            f"Resolution: {width}x{height}, steps: {steps}, guidance: "
+            f"{guidance}\n"
+            f"Seed: {seed}, device: {device}, dtype: {dtype_name}, "
+            f"time: {elapsed:.1f}s"
         )
         return str(out_path), str(out_path), status
     except gr.Error as error:
@@ -267,6 +193,8 @@ def random_seed():
 
 
 def device_status():
+    import torch
+
     device, dtype = get_device_and_dtype()
     mps_built = torch.backends.mps.is_built()
     mps_available = torch.backends.mps.is_available()

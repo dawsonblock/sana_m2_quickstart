@@ -16,7 +16,12 @@ python3 -m py_compile \
   verify_mps.py \
   run_sana_mps.py \
   benchmark_sana_m2.py \
-  app_m2.py
+  app_m2.py \
+  sana_core/__init__.py \
+  sana_core/engine.py \
+  sana_core/metadata.py \
+  sana_core/paths.py \
+  sana_core/schemas.py
 
 echo "[3/4] Root dependency guard (no CUDA-only packages)"
 if grep -R -n "flash-attn\|xformers\|bitsandbytes\|cu128\|cuda-toolkit\|triton\|mmcv" \
