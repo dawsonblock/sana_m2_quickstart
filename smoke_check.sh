@@ -32,6 +32,9 @@ if [[ ! -f "Sana-main/DO_NOT_RUN_ON_MAC_M2.md" ]]; then
   exit 1
 fi
 
+find . -type d -name "__pycache__" -prune -exec rm -rf {} +
+find . -name "*.pyc" -delete
+
 echo ""
 echo "PASS: Smoke check completed successfully."
 echo "Next on a real Mac M2: ./setup.sh && ./launch.sh verify && ./launch.sh generate \"test prompt\""
